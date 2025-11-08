@@ -24,6 +24,25 @@ button {
 </head>
 <body>
 
+<div id="status"></div>
+<script>
+    async function checkBackend() {
+        const baseUrl = window.location.hostname === "localhost"
+            ? "http://localhost:3000"
+            : "https://test-sm-website.fly.dev";
+
+        const el = document.getElementById("status");
+        try {
+            const r = await fetch(`${baseUrl}/health`, {method: "GET"});
+            el.innerText = r.ok ? "backend online ✅" : "backend offline ❌";
+        } catch (_) {
+            el.innerText = "backend offline ❌"
+        }
+    }
+    checkBackend()
+    setInterval(checkBackend, 5000)
+</script>
+
 <h2>Sign up</h2>
 <input type="email" id="email" placeholder="email">
 <button onclick="register()">Submit</button>
