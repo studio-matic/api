@@ -1,6 +1,10 @@
-const baseUrl = window.location.hostname === "localhost"
-    ? "http://localhost:3000"
-    : "https://test-sm-website.fly.dev";
+const host = window.location.hostname;
+let baseUrl;
+if (host === "localhost" || host.startsWith("127.") || host === "[::1]") {
+    baseUrl = `http://${host}:3000`;
+} else {
+    baseUrl = "https://test-sm-website.fly.dev";
+}
 
 async function checkBackend() {
     const el = document.getElementById("status");

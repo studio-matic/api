@@ -29,10 +29,17 @@ async fn main() {
         ))*/;
 
     let port = std::env::var("PORT").expect("PORT must be set");
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
+    let listener_ipv4 = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
         .unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let listener_ipv6 = tokio::net::TcpListener::bind(format!("::1:{port}"))
+        .await
+        .unwrap();
+    println!("Listening on http://[::1]:{port} and http://0.0.0.0:{port} ...");
+    tokio::select! {
+        _ = axum::serve(listener_ipv4, app.clone()) => {},
+        _ = axum::serve(listener_ipv6, app) => {},
+    }
 }
 
 #[derive(Deserialize)]
