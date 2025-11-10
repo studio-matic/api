@@ -1,73 +1,40 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta charset="UTF-8">
-<title>Sign Up</title>
-<style>
-body {
-    font-family: system-ui, sans-serif;
-    max-width: 480px;
-    margin: 120px auto;
-}
-input {
-    width: 100%;
-    padding: 12px;
-    font-size: 18px;
-}
-button {
-    margin-top: 12px;
-    padding: 12px;
-    font-size: 18px;
-    cursor: pointer;
-}
-</style>
+    <meta charset="UTF-8">
+    <title>Sign Up</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 480px;
+            margin: 120px auto;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 12px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
 </head>
+
 <body>
 
-<div id="status"></div>
-<script>
-    const el = document.getElementById("status");
-    el.innerText = "checking backend ⏳";
-    async function checkBackend() {
-        const baseUrl = window.location.hostname === "localhost"
-            ? "http://localhost:3000"
-            : "https://test-sm-website.fly.dev";
+    <div id="status">checking backend ⏳</div>
 
-        const el = document.getElementById("status");
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        try {
-            const r = await fetch(`${baseUrl}/health`, {method: "GET", signal: controller.signal});
-            clearTimeout(timeoutId);
-            el.innerText = r.ok ? "backend online ✅" : "backend offline ❌";
-        } catch (_) {
-            clearTimeout(timeoutId);
-            el.innerText = "backend offline ❌"
-        }
-    }
-    checkBackend()
-    setInterval(checkBackend, 5000)
-</script>
+    <h2>Sign up</h2>
+    <input type="email" id="email" placeholder="email">
+    <button onclick="register()">Submit</button>
 
-<h2>Sign up</h2>
-<input type="email" id="email" placeholder="email">
-<button onclick="register()">Submit</button>
-
-<script>
-async function register() {
-    const email = document.getElementById("email").value;
-    const baseUrl = window.location.hostname === "localhost"
-        ? "http://localhost:3000"
-        : "https://test-sm-website.fly.dev";
-
-    const res = await fetch(`${baseUrl}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json"},
-        body: JSON.stringify({email})
-    });
-    alert(await res.text());
-}
-</script>
-
+    <script src="js/main.js"></script>
 </body>
+
 </html>

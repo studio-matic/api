@@ -55,6 +55,8 @@
             [
               taplo
               (rust-bin.fromRustupToolchainFile ./back/rust-toolchain.toml)
+              vscode-langservers-extracted
+              typescript-language-server
             ]
             ++ [
               mprocs
