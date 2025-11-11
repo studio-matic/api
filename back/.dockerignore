@@ -1,2 +1,7 @@
-fly.toml
-.git/
+*
+
+!.cargo
+!src/
+!build.rs
+!Cargo.lock
+!Cargo.toml
