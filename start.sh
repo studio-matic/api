@@ -1,7 +1,5 @@
 if [ "$1" = "online" ]; then
-  mprocs --names="deploy back,deploy db,proxy db, db shell" \
-    "fly -c back/fly.toml machine start" \
-    "fly -c db-fly-io/fly.toml machine start" \
+  mprocs --names="proxy db, db shell" \
     "fly -c db-fly-io/fly.toml proxy 3306 -a sm-mysql-rabbit" \
     "mariadb --protocol=tcp -h localhost -P 3306 -u dev -p"
 else
