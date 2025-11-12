@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 480px;
+            margin: 120px auto;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 12px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="status">checking backend ⏳</div>
+
+    <h2>Login</h2>
+    <input type="email" id="email" placeholder="email">
+    <input type="password" id="password" placeholder="password">
+    <button onclick="signup()">Sign Up</button>
+    <button onclick="signin()">Sign In</button>
+
+    <script src="js/main.js"></script>
+</body>
+
+</html>

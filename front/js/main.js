@@ -31,3 +31,25 @@ async function register() {
     });
     alert(await res.text());
 }
+
+async function signup() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    const res = await fetch(`${baseUrl}/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+    });
+    alert(await res.text());
+}
+
+async function signin() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    const res = await fetch(`${baseUrl}/signin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+    });
+    alert(await res.text());
+}

@@ -1,3 +1,7 @@
+use argon2::{
+    Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
+};
 use axum::{
     Json, Router,
     extract::State,
@@ -5,7 +9,7 @@ use axum::{
     routing,
 };
 use serde::{Deserialize, Serialize};
-use sqlx::MySqlPool;
+use sqlx::{MySqlPool, Row};
 use std::{env, net::SocketAddr};
 use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfig};
@@ -18,8 +22,10 @@ async fn main() {
         .expect("Unable to connect to mysql database");
 
     let app = Router::new()
-        .route("/register", routing::post(register))
         .route("/health", routing::get(health))
+        .route("/register", routing::post(register))
+        .route("/signup", routing::post(signup))
+        .route("/signin", routing::post(signin))
         .with_state(pool)
         .layer(GovernorLayer::new(GovernorConfig::default()))
         .layer(
@@ -58,6 +64,50 @@ async fn register(State(pool): State<MySqlPool>, Json(req): Json<RegisterRequest
         .await;
 
     "ok"
+}
+
+#[derive(Deserialize)]
+struct SignRequest {
+    email: String,
+    password: String,
+}
+
+async fn signup(State(pool): State<MySqlPool>, Json(req): Json<SignRequest>) -> &'static str {
+    match sqlx::query("INSERT INTO accounts (email, password) VALUES (?, ?)")
+        .bind(req.email)
+        .bind(
+            Argon2::default()
+                .hash_password(req.password.as_bytes(), &SaltString::generate(&mut OsRng))
+                .unwrap()
+                .to_string(),
+        )
+        .execute(&pool)
+        .await
+    {
+        Ok(_) => "ok",
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => "Account exists already",
+        Err(e) => panic!("{e}"),
+    }
+}
+
+async fn signin(State(pool): State<MySqlPool>, Json(req): Json<SignRequest>) -> &'static str {
+    let row = sqlx::query("SELECT (password) FROM accounts WHERE email = ?")
+        .bind(req.email)
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+    let hashed_password = match row {
+        Some(v) => v,
+        None => return "Account not found",
+    }
+    .get::<String, _>(0);
+    match Argon2::default().verify_password(
+        req.password.as_bytes(),
+        &PasswordHash::new(&hashed_password).unwrap(),
+    ) {
+        Ok(_) => "Successful login",
+        Err(_) => "Unsuccesful login",
+    }
 }
 
 #[derive(Serialize)]
