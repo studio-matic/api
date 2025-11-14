@@ -1,15 +1,11 @@
-use argon2::{
-    Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
-};
+mod auth;
 use axum::{
     Json, Router,
-    extract::State,
-    http::{HeaderValue, Method},
+    http::{HeaderValue, Method, header},
     routing,
 };
-use serde::{Deserialize, Serialize};
-use sqlx::{MySqlPool, Row};
+use serde::Serialize;
+use sqlx::MySqlPool;
 use std::{env, net::SocketAddr};
 use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfig};
@@ -21,11 +17,13 @@ async fn main() {
         .await
         .expect("Unable to connect to mysql database");
 
+    tokio::spawn(auth::cleanup_expired_sessions(pool.clone()));
+
     let app = Router::new()
         .route("/health", routing::get(health))
-        .route("/register", routing::post(register))
-        .route("/signup", routing::post(signup))
-        .route("/signin", routing::post(signin))
+        .route("/auth/signup", routing::post(auth::signup))
+        .route("/auth/signin", routing::post(auth::signin))
+        .route("/auth/validate", routing::get(auth::validate))
         .with_state(pool)
         .layer(GovernorLayer::new(GovernorConfig::default()))
         .layer(
@@ -40,7 +38,14 @@ async fn main() {
                     x
                 })
                 .allow_methods([Method::GET, Method::POST])
-                .allow_headers(Any),
+                .allow_headers([
+                    header::CONTENT_TYPE,
+                    header::ACCEPT,
+                    header::AUTHORIZATION,
+                    header::ORIGIN,
+                    header::USER_AGENT,
+                ])
+                .allow_credentials(true),
         )
         .into_make_service_with_connect_info::<SocketAddr>();
 
@@ -50,64 +55,6 @@ async fn main() {
         .unwrap_or_else(|_| panic!("Unable to bind http://[::]:{port} and 0.0.0.0:{port}"));
     println!("Listening on http://[::]:{port} and http://0.0.0.0:{port} ...");
     axum::serve(listener, app).await.unwrap();
-}
-
-#[derive(Deserialize)]
-struct RegisterRequest {
-    email: String,
-}
-
-async fn register(State(pool): State<MySqlPool>, Json(req): Json<RegisterRequest>) -> &'static str {
-    let _ = sqlx::query("INSERT INTO registrations (email) VALUES (?)")
-        .bind(req.email)
-        .execute(&pool)
-        .await;
-
-    "ok"
-}
-
-#[derive(Deserialize)]
-struct SignRequest {
-    email: String,
-    password: String,
-}
-
-async fn signup(State(pool): State<MySqlPool>, Json(req): Json<SignRequest>) -> &'static str {
-    match sqlx::query("INSERT INTO accounts (email, password) VALUES (?, ?)")
-        .bind(req.email)
-        .bind(
-            Argon2::default()
-                .hash_password(req.password.as_bytes(), &SaltString::generate(&mut OsRng))
-                .unwrap()
-                .to_string(),
-        )
-        .execute(&pool)
-        .await
-    {
-        Ok(_) => "ok",
-        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => "Account exists already",
-        Err(e) => panic!("{e}"),
-    }
-}
-
-async fn signin(State(pool): State<MySqlPool>, Json(req): Json<SignRequest>) -> &'static str {
-    let row = sqlx::query("SELECT (password) FROM accounts WHERE email = ?")
-        .bind(req.email)
-        .fetch_optional(&pool)
-        .await
-        .unwrap();
-    let hashed_password = match row {
-        Some(v) => v,
-        None => return "Account not found",
-    }
-    .get::<String, _>(0);
-    match Argon2::default().verify_password(
-        req.password.as_bytes(),
-        &PasswordHash::new(&hashed_password).unwrap(),
-    ) {
-        Ok(_) => "Successful login",
-        Err(_) => "Unsuccesful login",
-    }
 }
 
 #[derive(Serialize)]

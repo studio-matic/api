@@ -6,6 +6,6 @@ else
   ides start mariadb && sleep 1
   mprocs --names="serve back,serve front,db shell" \
     "PORT=3000 cargo run --manifest-path back/Cargo.toml " \
-    "miniserve front --index index.html " \
+    "miniserve front --pretty-urls --index index.html " \
     "mariadb -S ./.ides/mariadb/run/mysqld.sock -u root"
 fi
