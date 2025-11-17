@@ -11,7 +11,7 @@ dockerfile = 'Dockerfile'
 
 [env]
 PORT = '8080'
-FRONT_URL = 'https://studio-matic.github.io'
+CORS_ALLOWED_ORIGIN = 'https://studio-matic.github.io'
 
 [http_service]
 internal_port = 8080

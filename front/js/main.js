@@ -1,6 +1,16 @@
 const host = window.location.hostname;
 let baseUrl, hostingPrefix;
-if (host === "localhost" || host.startsWith("127.") || host === "[::1]") {
+if (
+    host === "localhost" ||
+    /^127\./.test(host) ||
+    host === "0.0.0.0" ||
+    host === "[::1]" ||
+    host === "[::]" ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+    /^\[?(fc|fd)[0-9a-fA-F:]+\]?$/.test(host)
+) {
     baseUrl = `http://${host}:3000`;
     hostingPrefix = ""
 } else {

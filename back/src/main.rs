@@ -9,7 +9,7 @@ use sqlx::MySqlPool;
 use std::{env, net::SocketAddr};
 use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfig};
-use tower_http::cors::{AllowOrigin, Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, CorsLayer};
 
 #[tokio::main]
 async fn main() {
@@ -28,14 +28,15 @@ async fn main() {
         .layer(GovernorLayer::new(GovernorConfig::default()))
         .layer(
             CorsLayer::new()
-                .allow_origin({
-                    let x: AllowOrigin = if let Ok(e) = env::var("FRONT_URL") {
-                        HeaderValue::from_str(&e).expect("Invalid FRONT_URL").into()
-                    } else {
-                        eprintln!("WARNING: FRONT_URL unset, allowing all origins for CORS");
-                        Any.into()
-                    };
-                    x
+                .allow_origin(if let Ok(e) = env::var("CORS_ALLOWED_ORIGIN") {
+                    HeaderValue::from_str(&e)
+                        .expect("Invalid CORS_ALLOWED_ORIGIN")
+                        .into()
+                } else {
+                    #[cfg(not(debug_assertions))]
+                    panic!("CORS_ALLOWED_ORIGIN must be set");
+                    #[cfg(debug_assertions)]
+                    AllowOrigin::predicate(move |_: &http::HeaderValue, _: &Parts| true)
                 })
                 .allow_methods([Method::GET, Method::POST])
                 .allow_headers([
