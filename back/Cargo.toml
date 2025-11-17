@@ -13,3 +13,5 @@ sqlx = { version = "0.8", features = ["runtime-tokio", "mysql", "macros"] }
 tokio = { version = "1", features = ["full"] }
 tower-http = { version = "0.6", features = ["cors"] }
 tower_governor = "0.8.0"
+utoipa = { version = "5.4.0", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum", "reqwest"] }

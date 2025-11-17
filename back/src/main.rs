@@ -1,7 +1,7 @@
 mod auth;
 use axum::{
     Json, Router,
-    http::{HeaderValue, Method, header},
+    http::{self, HeaderValue, Method, StatusCode, header, request::Parts},
     routing,
 };
 use serde::Serialize;
@@ -10,6 +10,20 @@ use std::{env, net::SocketAddr};
 use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfig};
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use utoipa_swagger_ui::SwaggerUi;
+
+#[derive(utoipa::OpenApi)]
+#[openapi(paths(health))]
+struct ApiDoc;
+fn openapi() -> utoipa::openapi::OpenApi {
+    use crate::auth;
+    use utoipa::OpenApi;
+    let mut api = ApiDoc::openapi();
+    api.merge(auth::signup::openapi());
+    api.merge(auth::signin::openapi());
+    api.merge(auth::validate::openapi());
+    api
+}
 
 #[tokio::main]
 async fn main() {
@@ -20,6 +34,7 @@ async fn main() {
     tokio::spawn(auth::cleanup_expired_sessions(pool.clone()));
 
     let app = Router::new()
+        .merge(SwaggerUi::new("/").url("/api-docs/openapi.json", openapi()))
         .route("/health", routing::get(health))
         .route("/auth/signup", routing::post(auth::signup))
         .route("/auth/signin", routing::post(auth::signin))
@@ -58,11 +73,18 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 struct Health {
     status: &'static str,
 }
 
-async fn health() -> Json<Health> {
-    Json(Health { status: "ok" })
+#[utoipa::path(
+    get,
+    path = "/health",
+    responses(
+        (status = StatusCode::OK, description = "Backend is healthy", body = Health),
+    ),
+)]
+async fn health() -> (StatusCode, Json<Health>) {
+    (StatusCode::OK, Json(Health { status: "ok" }))
 }
