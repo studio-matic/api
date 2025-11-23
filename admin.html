@@ -1,40 +1,34 @@
 <!DOCTYPE html>
 <html>
+    <head>
+        <link href="css/admin_style.css" rel="stylesheet">
 
-<head>
-    <meta charset="UTF-8">
-    <title>Admin</title>
-    <style>
-        body {
-            font-family: system-ui, sans-serif;
-            max-width: 480px;
-            margin: 120px auto;
-        }
+        <link rel="stylesheet" href="mystyle.css">
+        <meta charset="UTF-8">
+        <title>Admin</title>
+    </head>
 
-        input {
-            width: 100%;
-            padding: 12px;
-            font-size: 18px;
-        }
+    <body>
+        <div id="status">checking backend ⏳</div>
 
-        button {
-            margin-top: 12px;
-            padding: 12px;
-            font-size: 18px;
-            cursor: pointer;
-        }
-    </style>
-</head>
+        <h2>Welcome to the admin dashboard</h2>
+         <!-- <p id="db-data">Loading db data...</p> -->
 
-<body>
+        <script src="js/main.js"></script>
+        <script>redirLoggedOut()</script>
 
-    <div id="status">checking backend ⏳</div>
-
-    <h2>Welcome to the admin dashboard</h2>
-    <p id="db-data">Loading db data...</p>
-
-    <script src="js/main.js"></script>
-    <script>redirLoggedOut()</script>
-</body>
-
+        <table id="accounts" role="table">
+        <thead>
+            <tr>
+                <th>id</th>
+                <th>email</th>
+                <th>password</th>
+                <th>created at</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data rows will be inserted here by JS -->
+        </tbody>
+        </table>
+    </body>
 </html>
