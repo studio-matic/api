@@ -1,0 +1,42 @@
+body {
+    font-family: system-ui, sans-serif;
+    max-width: 480px;
+    margin: 120px auto;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+}
+
+button {
+    margin-top: 12px;
+    padding: 12px;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+#accounts {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+tr:hover {
+    background-color: #ddd;
+}
