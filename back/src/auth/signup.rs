@@ -9,7 +9,9 @@ use axum::{
     http::{StatusCode, header},
     response::{AppendHeaders, IntoResponse},
 };
+use emval::ValidationError;
 use sqlx::MySqlPool;
+use tokio::task;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(signup))]
@@ -34,13 +36,26 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
             status = StatusCode::CONFLICT,
             description = "Unsuccessful signup: Account already exists",
         ),
+        (
+            status = StatusCode::BAD_REQUEST,
+            description = "Unsuccessful signup: Invalid email",
+        ),
     ),
 )]
 pub async fn signup(
     State(pool): State<MySqlPool>,
     Json(req): Json<SignRequest>,
 ) -> impl IntoResponse {
-    let token = generate_session_token();
+    let email = match task::spawn_blocking(|| emval::validate_email(req.email))
+        .await
+        .unwrap()
+    {
+        Ok(v) => v,
+        Err(ValidationError::SyntaxError(e)) | Err(ValidationError::ValueError(e)) => {
+            return (StatusCode::BAD_REQUEST, e).into_response();
+        }
+    }
+    .normalized;
 
     let hashed_password = Argon2::default()
         .hash_password(req.password.as_bytes(), &SaltString::generate(&mut OsRng))
@@ -48,16 +63,18 @@ pub async fn signup(
         .to_string();
 
     let account_result = sqlx::query("INSERT INTO accounts (email, password) VALUES (?, ?)")
-        .bind(&req.email)
+        .bind(&email)
         .bind(&hashed_password)
         .execute(&pool)
         .await;
+
+    let token = generate_session_token();
 
     match account_result {
         Ok(_) => {
             if let Err(e) = sqlx::query("INSERT INTO sessions (token, email) VALUES (?, ?)")
                 .bind(&token)
-                .bind(&req.email)
+                .bind(&email)
                 .execute(&pool)
                 .await
             {
@@ -87,9 +104,11 @@ pub async fn signup(
             )
                 .into_response()
         }
-        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => {
-            (StatusCode::CONFLICT, Json("Unsuccessful signup: Account already exists")).into_response()
-        }
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => (
+            StatusCode::CONFLICT,
+            Json("Unsuccessful signup: Account already exists"),
+        )
+            .into_response(),
         Err(e) => {
             eprintln!("{e}");
             (

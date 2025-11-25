@@ -6,7 +6,9 @@ use axum::{
     http::{StatusCode, header},
     response::{AppendHeaders, IntoResponse},
 };
+use emval::ValidationError;
 use sqlx::{MySqlPool, Row};
+use tokio::task;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(signin))]
@@ -36,18 +38,34 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
             status = StatusCode::UNAUTHORIZED,
             description = "Unsuccessful signin: Password incorrect",
         ),
+        (
+            status = StatusCode::BAD_REQUEST,
+            description = "Unsuccessful signin: Invalid email",
+        ),
     ),
 )]
 pub async fn signin(
     State(pool): State<MySqlPool>,
     Json(req): Json<SignRequest>,
 ) -> impl IntoResponse {
+    let email = match task::spawn_blocking(|| emval::validate_email(req.email))
+        .await
+        .unwrap()
+    {
+        Ok(v) => v,
+        Err(ValidationError::SyntaxError(e)) | Err(ValidationError::ValueError(e)) => {
+            return (StatusCode::BAD_REQUEST, e).into_response();
+        }
+    }
+    .normalized;
+
     let hashed_password = if let Some(v) =
         sqlx::query("SELECT password FROM accounts WHERE email = ?")
-            .bind(&req.email)
+            .bind(&email)
             .fetch_optional(&pool)
             .await
-            .ok().flatten()
+            .ok()
+            .flatten()
     {
         v
     } else {
@@ -70,7 +88,7 @@ pub async fn signin(
     {
         if let Err(e) = sqlx::query("INSERT INTO sessions (token, email) VALUES (?, ?)")
             .bind(&token)
-            .bind(&req.email)
+            .bind(&email)
             .execute(&pool)
             .await
         {
