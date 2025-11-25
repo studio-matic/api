@@ -32,7 +32,7 @@ async function checkBackend() {
     }
 }
 checkBackend()
-setInterval(checkBackend, 5000)
+setInterval(checkBackend, 10000)
 
 async function welc() {
     const el = document.getElementById("welc");
