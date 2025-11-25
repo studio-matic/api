@@ -30,8 +30,7 @@ pub async fn cleanup_expired_sessions(pool: MySqlPool) {
     loop {
         interval.tick().await;
 
-        match sqlx::query("DELETE FROM sessions WHERE created_at < NOW() - INTERVAL ? SECOND")
-            .bind(SESSION_TOKEN_MAX_AGE.as_secs())
+        match sqlx::query("DELETE FROM sessions WHERE expires_at < NOW()")
             .execute(&pool)
             .await
         {

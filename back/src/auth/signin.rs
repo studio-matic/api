@@ -86,11 +86,19 @@ pub async fn signin(
         )
         .is_ok()
     {
-        if let Err(e) = sqlx::query("INSERT INTO sessions (token, email) VALUES (?, ?)")
-            .bind(&token)
-            .bind(&email)
-            .execute(&pool)
-            .await
+        if let Err(e) = sqlx::query(
+            "INSERT INTO sessions (token, account_id, expires_at)
+                VALUES (
+                    ?,
+                    (SELECT id FROM accounts WHERE email = ?),
+                    NOW() + INTERVAL ? SECOND
+                )",
+        )
+        .bind(&token)
+        .bind(&email)
+        .bind(SESSION_TOKEN_MAX_AGE.as_secs())
+        .execute(&pool)
+        .await
         {
             eprintln!("{e}");
             (
