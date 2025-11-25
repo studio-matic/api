@@ -23,14 +23,16 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     post,
     path = "/signup",
     responses(
-        (status = StatusCode::CREATED, description = "Account created successfully"),
         (
-            status = StatusCode::INTERNAL_SERVER_ERROR, 
-            description = "Internal server error | Account created, but could not save session token", 
+            status = StatusCode::CREATED, description = "Successful signup",
         ),
         (
-            status = StatusCode::CONFLICT, 
-            description = "Account already exists", 
+            status = StatusCode::INTERNAL_SERVER_ERROR,
+            description = "Internal server error | Unsuccessful signup, but could not save session token",
+        ),
+        (
+            status = StatusCode::CONFLICT,
+            description = "Unsuccessful signup: Account already exists",
         ),
     ),
 )]
@@ -62,7 +64,7 @@ pub async fn signup(
                 eprintln!("{e}");
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json("Account created, but could not save session token"),
+                    Json("Unsuccessful signup, but could not save session token"),
                 )
                     .into_response();
             }
@@ -81,12 +83,12 @@ pub async fn signup(
                         SESSION_TOKEN_MAX_AGE.as_secs()
                     ),
                 )]),
-                Json("Account created successfully"),
+                Json("Successful signup"),
             )
                 .into_response()
         }
         Err(sqlx::Error::Database(e)) if e.is_unique_violation() => {
-            (StatusCode::CONFLICT, Json("Account already exists")).into_response()
+            (StatusCode::CONFLICT, Json("Unsuccessful signup: Account already exists")).into_response()
         }
         Err(e) => {
             eprintln!("{e}");

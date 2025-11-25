@@ -21,17 +21,20 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     path = "/signin",
     responses(
         (
-            status = StatusCode::NOT_FOUND, 
-            description = "Unsuccessful login: account not found", 
+            status = StatusCode::NOT_FOUND,
+            description = "Unsuccessful signin: Account not found",
         ),
         (
-            status = StatusCode::INTERNAL_SERVER_ERROR, 
-            description = "successful login, but could not save session token", 
+            status = StatusCode::INTERNAL_SERVER_ERROR,
+            description = "Successful signin, but could not save session token",
         ),
-        (status = StatusCode::OK, description = "successful login"),
         (
-            status = StatusCode::UNAUTHORIZED, 
-            description = "Unsuccessful login: password incorrect", 
+            status = StatusCode::OK,
+            description = "Successful signin"
+        ),
+        (
+            status = StatusCode::UNAUTHORIZED,
+            description = "Unsuccessful signin: Password incorrect",
         ),
     ),
 )]
@@ -50,7 +53,7 @@ pub async fn signin(
     } else {
         return (
             StatusCode::NOT_FOUND,
-            Json("Unsuccessful login: account not found"),
+            Json("Unsuccessful signin: Account not found"),
         )
             .into_response();
     }
@@ -74,7 +77,7 @@ pub async fn signin(
             eprintln!("{e}");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json("successful login, but could not save session token"),
+                Json("Successful signin, but could not save session token"),
             )
                 .into_response()
         } else {
@@ -93,14 +96,14 @@ pub async fn signin(
                         SESSION_TOKEN_MAX_AGE.as_secs()
                     ),
                 )]),
-                Json("successful login"),
+                Json("Successful signin"),
             )
                 .into_response()
         }
     } else {
         (
             StatusCode::UNAUTHORIZED,
-            Json("Unsuccessful login: password incorrect"),
+            Json("Unsuccessful signin: Password incorrect"),
         )
             .into_response()
     }

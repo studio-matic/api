@@ -25,10 +25,10 @@ struct ValidationResponse {
     get,
     path = "/validate",
     responses(
-        (status = StatusCode::OK, description = "successful login", body = ValidationResponse),
+        (status = StatusCode::OK, description = "Successful login", body = ValidationResponse),
         (
             status = StatusCode::UNAUTHORIZED, 
-            description = "Unsuccessful login: session_token cookie not found | Unsuccessful login: session token not found | Unsuccessful login: cookies not found", 
+            description = "Unsuccessful login: session_token cookie not found | Unsuccessful login: Session token not found | Unsuccessful login: Cookies not found", 
         ),
     ),
 )]
@@ -57,20 +57,20 @@ pub async fn validate(State(pool): State<MySqlPool>, headers: HeaderMap) -> impl
                 StatusCode::OK,
                 Json(ValidationResponse {
                     email: email.get::<String, _>(0),
-                    message: "successful login",
+                    message: "Successful login",
                 }),
             )
                 .into_response(),
             None => (
                 StatusCode::UNAUTHORIZED,
-                Json("Unsuccessful login: session token not found"),
+                Json("Unsuccessful login: Session token not found"),
             )
                 .into_response(),
         }
     } else {
         (
             StatusCode::UNAUTHORIZED,
-            Json("Unsuccessful login: cookies not found"),
+            Json("Unsuccessful login: Cookies not found"),
         )
             .into_response()
     }
