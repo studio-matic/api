@@ -63,14 +63,18 @@
               mariadb-client
               miniserve
               flyctl
+              xdg-utils
             ];
+          PORT = 3000;
           DATABASE_URL = "mysql://root@localhost/db?socket=${socket}";
           imports = [
             ./nix/mysql.nix
+            ./nix/phpMyAdmin
           ];
           services = {
             mysql.enable = true;
             mysql.dataDir = dataDir;
+            phpMyAdmin.enable = true;
           };
         };
     });

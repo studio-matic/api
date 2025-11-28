@@ -24,7 +24,13 @@ in {
     # bindAddress = mkOption {
     #   type = types.str;
     #   description = "Address MariaDB will bind to.";
-    #   default = "127.0.0.1";
+    #   default = "[::]";
+    # };
+
+    # port = mkOption {
+    #   type = types.int;
+    #   description = "Port MariaDB will bind to.";
+    #   default = 3306;
     # };
 
     extraArgs = mkOption {
