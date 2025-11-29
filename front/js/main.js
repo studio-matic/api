@@ -56,7 +56,11 @@ async function signup() {
         body: JSON.stringify({ email, password }),
         credentials: "include"
     });
-    alert(await res.text());
+    if (res.ok) {
+        signin();
+    } else {
+        alert(await res.text());
+    }
 }
 
 async function signin() {

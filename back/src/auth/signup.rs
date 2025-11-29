@@ -1,4 +1,4 @@
-use super::{SESSION_TOKEN_MAX_AGE, SignRequest, generate_session_token};
+use super::SignRequest;
 use crate::ApiResult;
 use argon2::{
     Argon2,
@@ -7,8 +7,8 @@ use argon2::{
 use axum::{
     Json,
     extract::State,
-    http::{StatusCode, header},
-    response::{AppendHeaders, IntoResponse, Response},
+    http::StatusCode,
+    response::{IntoResponse, Response},
 };
 use emval::ValidationError as EmailValidationError;
 use sqlx::MySqlPool;
@@ -89,50 +89,13 @@ pub async fn signup(
         .map_err(|e| SignupError::PasswordHashError(e.to_string()))?
         .to_string();
 
-    let account_result = sqlx::query("INSERT INTO accounts (email, password) VALUES (?, ?)")
+    match sqlx::query("INSERT INTO accounts (email, password) VALUES (?, ?)")
         .bind(&email)
         .bind(&hashed_password)
         .execute(&pool)
-        .await;
-
-    let token = generate_session_token();
-
-    match account_result {
-        Ok(_) => {
-            let _ = sqlx::query(
-                "INSERT INTO sessions (token, account_id, expires_at)
-                VALUES (
-                    ?,
-                    (SELECT id FROM accounts WHERE email = ? LIMIT 1),
-                    NOW() + INTERVAL ? SECOND
-                )",
-            )
-            .bind(&token)
-            .bind(&email)
-            .bind(SESSION_TOKEN_MAX_AGE.as_secs())
-            .execute(&pool)
-            .await
-            .map_err(SignupError::DatabaseError)?;
-            Ok(
-                (
-                    StatusCode::CREATED,
-                    AppendHeaders([(
-                        header::SET_COOKIE,
-                        #[cfg(debug_assertions)]
-                        format!(
-                            "session_token={token}; Max-Age={}; Path=/; HttpOnly",
-                            SESSION_TOKEN_MAX_AGE.as_secs()
-                        ),
-                        #[cfg(not(debug_assertions))]
-                        format!(
-                            "session_token={token}; Max-Age={}; Path=/; HttpOnly; Secure; SameSite=None",
-                            SESSION_TOKEN_MAX_AGE.as_secs()
-                        ),
-                    )]),
-                )
-                .into_response()
-            )
-        }
+        .await
+    {
+        Ok(_) => Ok(StatusCode::CREATED.into_response()),
         Err(sqlx::Error::Database(e)) if e.is_unique_violation() => {
             Err(SignupError::Conflict.into())
         }
