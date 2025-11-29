@@ -86,8 +86,8 @@ enum ApiError {
     Validation(#[from] auth::validate::ValidationError),
     // #[error("could not sign in: {0}")]
     // Signin(#[from] auth::signin::SigninError),
-    // #[error("could not sign up: {0}")]
-    // Signup(#[from] auth::signup::SignupError),
+    #[error("could not sign up: {0}")]
+    Signup(#[from] auth::signup::SignupError),
 }
 
 impl IntoResponse for ApiError {
@@ -95,7 +95,7 @@ impl IntoResponse for ApiError {
         match self {
             ApiError::Validation(e) => e.into_response(),
             // ApiError::Signin(e) => e.into_response(),
-            // ApiError::Signup(e) => e.into_response(),
+            ApiError::Signup(e) => e.into_response(),
         }
     }
 }
