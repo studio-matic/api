@@ -36,7 +36,7 @@ setInterval(checkBackend, 10000)
 
 async function welc() {
     const el = document.getElementById("welc");
-    const res = await fetch(`${baseUrl}/auth/validate`, {
+    const res = await fetch(`${baseUrl}/me`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include"
@@ -44,7 +44,6 @@ async function welc() {
     if (res.ok) {
         const data = await res.json();
         el.innerText = el.innerText + " " + data.email;
-        alert(data.message);
     }
 }
 
@@ -79,7 +78,7 @@ async function signin() {
 }
 
 async function cookiesignin() {
-    const res = await fetch(`${baseUrl}/auth/validate`, {
+    const res = await fetch(`${baseUrl}/me`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include"
