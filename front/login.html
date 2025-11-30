@@ -33,11 +33,13 @@
     <h2>Login</h2>
     <input type="email" id="email" placeholder="email">
     <input type="password" id="password" placeholder="password">
-    <button onclick="signup()">Sign Up</button>
-    <button onclick="signin()">Sign In</button>
-    <button onclick="cookiesignin()">Cookie Sign In</button>
+    <button id="signup" onclick="signup()">Sign Up</button>
+    <button id="signin" onclick="signin()">Sign In</button>
+    <button id="signout" onclick="signout()">Sign Out</button>
+    <button id="cookiesignin" onclick="cookiesignin()">Test Cookie Sign In</button>
 
     <script src="js/main.js"></script>
+    <script>updateAuthUI()</script>
 </body>
 
 </html>

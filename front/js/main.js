@@ -81,6 +81,16 @@ async function signin() {
     }
 }
 
+async function signout() {
+    const res = await fetch(`${baseUrl}/auth/signout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include"
+    });
+    updateAuthUI();
+    alert(await res.text());
+}
+
 async function cookiesignin() {
     const res = await fetch(`${baseUrl}/me`, {
         method: "GET",
@@ -88,6 +98,32 @@ async function cookiesignin() {
         credentials: "include"
     });
     alert(await res.text());
+}
+
+async function updateAuthUI() {
+    const email = document.getElementById("email");
+    const password = document.getElementById("password");
+    const signup = document.getElementById("signup");
+    const signin = document.getElementById("signin");
+    const signout = document.getElementById("signout");
+    const res = await fetch(`${baseUrl}/auth/validate`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include"
+    });
+    if (res.ok) {
+        email.hidden = true;
+        password.hidden = true;
+        signup.hidden = true;
+        signin.hidden = true;
+        signout.hidden = false;
+    } else {
+        email.hidden = false;
+        password.hidden = false;
+        signup.hidden = false;
+        signin.hidden = false;
+        signout.hidden = true;
+    }
 }
 
 async function redirLoggedOut() {

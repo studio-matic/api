@@ -23,6 +23,7 @@ fn openapi() -> utoipa::openapi::OpenApi {
     let mut api = ApiDoc::openapi();
     api.merge(auth::signup::openapi());
     api.merge(auth::signin::openapi());
+    api.merge(auth::signout::openapi());
     api.merge(auth::validate::openapi());
     api.merge(me::openapi());
     api.merge(health::openapi());
@@ -42,6 +43,7 @@ async fn main() {
         .route("/health", routing::get(health::health))
         .route("/auth/signup", routing::post(auth::signup))
         .route("/auth/signin", routing::post(auth::signin))
+        .route("/auth/signout", routing::post(auth::signout))
         .route("/auth/validate", routing::get(auth::validate))
         .route("/me", routing::get(me::me))
         .with_state(pool)

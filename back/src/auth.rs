@@ -1,9 +1,11 @@
 pub mod signin;
+pub mod signout;
 pub mod signup;
 pub mod validate;
 use rand::Rng;
 use serde::Deserialize;
 pub use signin::signin;
+pub use signout::signout;
 pub use signup::signup;
 use sqlx::MySqlPool;
 use std::time::Duration;
