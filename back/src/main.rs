@@ -55,7 +55,6 @@ async fn main() {
                 } else {
                     #[cfg(not(debug_assertions))]
                     panic!("CORS_ALLOWED_ORIGIN must be set");
-                    #[cfg(debug_assertions)]
                     AllowOrigin::predicate(move |_: &http::HeaderValue, _: &Parts| true)
                 })
                 .allow_methods([Method::GET, Method::POST])
