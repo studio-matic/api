@@ -61,21 +61,27 @@
             ++ [
               mprocs
               mariadb-client
+              docker
               miniserve
               flyctl
               xdg-utils
             ];
-          PORT = 3000;
-          DATABASE_URL = "mysql://root@localhost/db?socket=${socket}";
           imports = [
             ./nix/mysql.nix
+            ./nix/docker.nix
             ./nix/phpMyAdmin
           ];
           services = {
             mysql.enable = true;
             mysql.dataDir = dataDir;
+            docker.enable = true;
             phpMyAdmin.enable = true;
           };
+          PORT = 3000;
+          DATABASE_URL = "mysql://root@localhost/db?socket=${socket}";
+          shellHook = ''
+            export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/docker.sock"
+          '';
         };
     });
   };
