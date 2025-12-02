@@ -5,13 +5,13 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::MySqlPool;
 use thiserror::Error;
 use time::OffsetDateTime;
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(donations))]
+#[openapi(paths(donations, add_donation))]
 struct ApiDoc;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     use utoipa::OpenApi;
@@ -95,4 +95,51 @@ pub async fn donations(
         .collect::<ApiResult<Vec<_>>>()?;
 
     Ok((StatusCode::OK, Json(donations)))
+}
+
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct DonationRequest {
+    coins: u64,
+    income_eur: f64,
+    co_op: String, // TODO: validate to be either "S4L" or "STUDIO-MATIC"
+}
+
+#[utoipa::path(
+    post,
+    path = "/donations",
+    responses(
+        (
+            status = StatusCode::CREATED,
+            description = "Successfully added donation",
+        ),
+        (
+            status = StatusCode::NOT_FOUND,
+            description = "Missing session_token",
+        ),
+        (
+            status = StatusCode::UNAUTHORIZED,
+            description = "Not logged in",
+        ),
+        (status = StatusCode::INTERNAL_SERVER_ERROR)
+    )
+)]
+pub async fn add_donation(
+    state_pool: State<MySqlPool>,
+    headers: HeaderMap,
+    Json(req): Json<DonationRequest>,
+) -> ApiResult<impl IntoResponse> {
+    let _ = validate(state_pool.clone(), headers).await?;
+
+    let _ = sqlx::query(
+        "INSERT INTO donations (coins, income_eur, co_op)
+        VALUES (?, ?, ?)",
+    )
+    .bind(req.coins)
+    .bind(req.income_eur)
+    .bind(req.co_op)
+    .execute(&state_pool.0)
+    .await
+    .map_err(DonationError::DatabaseError)?;
+
+    Ok(StatusCode::CREATED)
 }

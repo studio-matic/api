@@ -208,3 +208,39 @@ async function loadDbData() {
         `
     });
 }
+
+async function enableForms() {
+    document.getElementById("add-donation-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const coins = parseInt(document.getElementById("donation-coins").value, 10);
+        const income_eur = parseFloat(document.getElementById("donation-income").value);
+        const co_op = "STUDIO-MATIC";
+        const statusEl = document.getElementById("add-donation-status");
+
+        try {
+            const res = await fetch(`${baseUrl}/donations`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ coins, income_eur, co_op })
+            });
+
+            if (res.ok) {
+                statusEl.innerText = "Donation added ✅";
+                document.getElementById("add-donation-form").reset();
+                loadDbData();
+
+                setTimeout(() => {
+                    statusEl.innerText = "";
+                }, 5000);
+            } else {
+                const text = await res.text();
+                statusEl.innerText = `Failed ❌: ${text}`;
+            }
+        } catch (err) {
+            console.error(err);
+            statusEl.innerText = "Error connecting to backend ❌";
+        }
+    });
+}

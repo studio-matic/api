@@ -51,6 +51,7 @@ async fn main() {
         .route("/auth/validate", routing::get(auth::validate))
         .route("/me", routing::get(me::me))
         .route("/donations", routing::get(donations::donations))
+        .route("/donations", routing::post(donations::add_donation))
         .route("/supporters", routing::get(supporters::supporters))
         .with_state(pool)
         .layer(GovernorLayer::new(GovernorConfig::default()))

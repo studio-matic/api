@@ -29,6 +29,19 @@
             <!-- Data rows will be inserted here by JS -->
         </tbody>
     </table>
+    <h3>Add a new donation</h3>
+    <form id="add-donation-form">
+        <label>
+            Coins:
+            <input type="number" id="donation-coins" required min="0">
+        </label>
+        <label>
+            Income (€):
+            <input type="number" id="donation-income" required step="0.01" min="0">
+        </label>
+        <button type="submit">Add Donation</button>
+    </form>
+    <div id="add-donation-status"></div>
     <h3>Supporters</h3>
     <table id="supporters" role="table">
         <thead>
@@ -44,6 +57,7 @@
         </tbody>
     </table>
     <script>loadDbData()</script>
+    <script>enableForms()</script>
 </body>
 
 </html>
