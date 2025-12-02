@@ -137,3 +137,55 @@ async function redirLoggedOut() {
         window.location.href = `${hostingPrefix}/login?next=${returnUrl}`;
     }
 }
+
+function prettyDate(isoString) {
+    const d = new Date(isoString);
+    return d.toLocaleDateString("en-GB", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+    });
+}
+
+async function loadDbData() {
+    const tbody = document.querySelector("#donations tbody");
+    tbody.innerHTML = "<tr><td colspan='4'>Loading…</td></tr>";
+
+    try {
+        const res = await fetch(`${baseUrl}/donations`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include"
+        });
+
+        if (!res.ok) {
+            tbody.innerHTML = "<tr><td colspan='4'>Failed to load data ❌</td></tr>";
+            return;
+        }
+
+        const data = await res.json();
+
+        tbody.innerHTML = "";
+
+        if (data.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='4'>No donations yet</td></tr>";
+            return;
+        }
+
+        data.forEach(({ coins, donated_at, income_eur, co_op }) => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${coins}</td>
+                <td>${prettyDate(donated_at)}</td>
+                <td>${income_eur.toFixed(2)}</td>
+                <td>${co_op}</td>
+            `;
+
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = "<tr><td colspan='4'>Error connecting to backend ❌</td></tr>";
+    }
+}

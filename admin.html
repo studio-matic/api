@@ -1,34 +1,35 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <link href="css/admin_style.css" rel="stylesheet">
 
-        <link rel="stylesheet" href="mystyle.css">
-        <meta charset="UTF-8">
-        <title>Admin</title>
-    </head>
+<head>
+    <link href="css/admin.css" rel="stylesheet">
 
-    <body>
-        <div id="status">checking backend ⏳</div>
+    <meta charset="UTF-8">
+    <title>Admin</title>
+</head>
 
-        <h2>Welcome to the admin dashboard</h2>
-         <!-- <p id="db-data">Loading db data...</p> -->
+<body>
+    <div id="status">checking backend ⏳</div>
+    <script src="js/main.js"></script>
+    <script>redirLoggedOut()</script>
 
-        <script src="js/main.js"></script>
-        <script>redirLoggedOut()</script>
+    <h2>Welcome to the admin dashboard</h2>
 
-        <table id="accounts" role="table">
+    <h3>Donations</h3>
+    <table id="donations" role="table">
         <thead>
             <tr>
-                <th>id</th>
-                <th>email</th>
-                <th>password</th>
-                <th>created at</th>
+                <th>coins</th>
+                <th>date</th>
+                <th>income (€)</th>
+                <th>co-op</th>
             </tr>
         </thead>
         <tbody>
             <!-- Data rows will be inserted here by JS -->
         </tbody>
-        </table>
-    </body>
+    </table>
+    <script>loadDbData()</script>
+</body>
+
 </html>
