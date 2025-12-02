@@ -147,45 +147,64 @@ function prettyDate(isoString) {
     });
 }
 
-async function loadDbData() {
-    const tbody = document.querySelector("#donations tbody");
-    tbody.innerHTML = "<tr><td colspan='4'>Loading…</td></tr>";
+async function loadTable({ url, selector, emptyText, columns }) {
+    const tbody = document.querySelector(selector);
+    tbody.innerHTML = `<tr><td colspan="4">Loading…</td></tr>`;
 
     try {
-        const res = await fetch(`${baseUrl}/donations`, {
+        const res = await fetch(url, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include"
         });
 
         if (!res.ok) {
-            tbody.innerHTML = "<tr><td colspan='4'>Failed to load data ❌</td></tr>";
+            tbody.innerHTML = `<tr><td colspan="4">Failed to load data ❌</td></tr>`;
             return;
         }
 
         const data = await res.json();
-
         tbody.innerHTML = "";
 
-        if (data.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='4'>No donations yet</td></tr>";
+        if (!data.length) {
+            tbody.innerHTML = `<tr><td colspan="4">${emptyText}</td></tr>`;
             return;
         }
 
-        data.forEach(({ coins, donated_at, income_eur, co_op }) => {
+        data.forEach(item => {
             const tr = document.createElement("tr");
-
-            tr.innerHTML = `
-                <td>${coins}</td>
-                <td>${prettyDate(donated_at)}</td>
-                <td>${income_eur.toFixed(2)}</td>
-                <td>${co_op}</td>
-            `;
-
+            tr.innerHTML = columns(item);
             tbody.appendChild(tr);
         });
+
     } catch (err) {
         console.error(err);
-        tbody.innerHTML = "<tr><td colspan='4'>Error connecting to backend ❌</td></tr>";
+        tbody.innerHTML = `<tr><td colspan="4">Error connecting to backend ❌</td></tr>`;
     }
+}
+
+async function loadDbData() {
+    await loadTable({
+        url: `${baseUrl}/donations`,
+        selector: "#donations tbody",
+        emptyText: "No donations yet",
+        columns: ({ coins, donated_at, income_eur, co_op }) => `
+            <td>${coins}</td>
+            <td>${prettyDate(donated_at)}</td>
+            <td>${income_eur.toFixed(2)}</td>
+            <td>${co_op}</td>
+        `
+    });
+
+    await loadTable({
+        url: `${baseUrl}/supporters`,
+        selector: "#supporters tbody",
+        emptyText: "No supporters yet",
+        columns: ({ name, supported_at, income_eur, co_op }) => `
+            <td>${name}</td>
+            <td>${prettyDate(supported_at)}</td>
+            <td>${income_eur.toFixed(2)}</td>
+            <td>${co_op}</td>
+        `
+    });
 }
