@@ -45,6 +45,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "api"
+version = "0.1.0"
+dependencies = [
+ "argon2",
+ "axum",
+ "emval",
+ "rand 0.9.2",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.17",
+ "time",
+ "tokio",
+ "tower-http",
+ "tower_governor",
+ "utoipa",
+ "utoipa-swagger-ui",
+]
+
+[[package]]
 name = "ar_archive_writer"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3352,26 +3372,6 @@ checksum = "77549399552de45a898a580c1b41d445bf730df867cc44e6c0233bbc4b8329de"
 dependencies = [
  "digest",
  "rand_core 0.6.4",
-]
-
-[[package]]
-name = "signup"
-version = "0.1.0"
-dependencies = [
- "argon2",
- "axum",
- "emval",
- "rand 0.9.2",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror 2.0.17",
- "time",
- "tokio",
- "tower-http",
- "tower_governor",
- "utoipa",
- "utoipa-swagger-ui",
 ]
 
 [[package]]

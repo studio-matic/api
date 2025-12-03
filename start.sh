@@ -10,7 +10,7 @@ if [ "${1-}" = "online" ]; then
         sleep 3 &&
         xdg-open "https://test-sm-website.fly.dev" &&
         sleep 3 &&
-        xdg-open "https://studio-matic.github.io/test-website"
+        xdg-open "https://studio-matic.github.io/api"
     } >/dev/null 2>&1 &
   fi
   mprocs --names="proxy db, db shell" \
