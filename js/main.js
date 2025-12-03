@@ -14,8 +14,8 @@ if (
     baseUrl = `http://${host}:3000`;
     hostingPrefix = ""
 } else {
-    baseUrl = "https://test-sm-website.fly.dev";
-    hostingPrefix = "/test-website"
+    baseUrl = "https://api.studio-matic.org";
+    hostingPrefix = ""
 }
 
 async function checkBackend() {
