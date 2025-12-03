@@ -1,9 +1,4 @@
-# fly.toml app configuration file generated for test-sm-website on 2025-11-08T07:03:48Z
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
-
-app = 'test-sm-website'
+app = 'studio-matic-s4l-api'
 primary_region = 'fra'
 
 [build]
@@ -11,7 +6,7 @@ dockerfile = 'Dockerfile'
 
 [env]
 PORT = '8080'
-CORS_ALLOWED_ORIGIN = 'https://studio-matic.github.io'
+CORS_ALLOWED_ORIGINS = 'https://test.studio-matic.org https://studio-matic.org'
 
 [http_service]
 internal_port = 8080

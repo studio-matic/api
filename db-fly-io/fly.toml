@@ -1,9 +1,4 @@
-# fly.toml app configuration file generated for sm-mysql-rabbit on 2025-11-08T05:11:10Z
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
-
-app = 'sm-mysql-rabbit'
+app = 'studio-matic-s4l-db'
 primary_region = 'fra'
 
 [build]

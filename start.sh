@@ -8,13 +8,13 @@ if [ "${1-}" = "online" ]; then
     {
       xdg-open "http://[::]:8000/address/index.php" &&
         sleep 3 &&
-        xdg-open "https://test-sm-website.fly.dev" &&
+        xdg-open "https://api.studio-matic.org" &&
         sleep 3 &&
-        xdg-open "https://studio-matic.github.io/api"
+        xdg-open "https://test.studio-matic.org"
     } >/dev/null 2>&1 &
   fi
   mprocs --names="proxy db, db shell" \
-    "fly -c db-fly-io/fly.toml proxy 3306 -b '[::]' -a sm-mysql-rabbit" \
+    "fly -c db-fly-io/fly.toml proxy 3306 -b '[::]'" \
     "mariadb --protocol=tcp -h localhost -P 3306 -u dev -p"
 elif [ "${1-}" = "offline" ]; then
   ides start && sleep 1

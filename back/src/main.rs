@@ -57,13 +57,15 @@ async fn main() {
         .layer(GovernorLayer::new(GovernorConfig::default()))
         .layer(
             CorsLayer::new()
-                .allow_origin(if let Ok(e) = env::var("CORS_ALLOWED_ORIGIN") {
-                    HeaderValue::from_str(&e)
-                        .expect("Invalid CORS_ALLOWED_ORIGIN")
+                .allow_origin(if let Ok(v) = env::var("CORS_ALLOWED_ORIGINS") {
+                    v.split_whitespace()
+                        .map(|v| HeaderValue::from_str(v).expect("Invalid CORS_ALLOWED_ORIGINS"))
+                        .collect::<Vec<_>>()
                         .into()
                 } else {
                     #[cfg(not(debug_assertions))]
-                    panic!("CORS_ALLOWED_ORIGIN must be set");
+                    panic!("CORS_ALLOWED_ORIGINS must be set");
+                    #[allow(unreachable_code)]
                     AllowOrigin::predicate(move |_: &http::HeaderValue, _: &Parts| true)
                 })
                 .allow_methods([Method::GET, Method::POST])
