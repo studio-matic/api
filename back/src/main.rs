@@ -50,9 +50,15 @@ async fn main() {
         .route("/auth/signout", routing::post(auth::signout))
         .route("/auth/validate", routing::get(auth::validate))
         .route("/me", routing::get(me::me))
-        .route("/donations", routing::get(donations::donations))
-        .route("/donations", routing::post(donations::add_donation))
         .route("/supporters", routing::get(supporters::supporters))
+        .route("/donations", routing::get(donations::get_donations))
+        .route("/donations/{id}", routing::get(donations::get_donation))
+        .route("/donations", routing::post(donations::post_donation))
+        .route("/donations/{id}", routing::put(donations::put_donation))
+        .route(
+            "/donations/{id}",
+            routing::delete(donations::delete_donation),
+        )
         .with_state(pool)
         .layer(GovernorLayer::new(GovernorConfig::default()))
         .layer(
@@ -68,7 +74,7 @@ async fn main() {
                     #[allow(unreachable_code)]
                     AllowOrigin::predicate(move |_: &http::HeaderValue, _: &Parts| true)
                 })
-                .allow_methods([Method::GET, Method::POST])
+                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
                 .allow_headers([
                     header::CONTENT_TYPE,
                     header::ACCEPT,

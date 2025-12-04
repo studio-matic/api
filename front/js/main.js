@@ -188,11 +188,15 @@ async function loadDbData() {
         url: `${baseUrl}/donations`,
         selector: "#donations tbody",
         emptyText: "No donations yet",
-        columns: ({ coins, donated_at, income_eur, co_op }) => `
+        columns: ({ id, coins, donated_at, income_eur, co_op }) => `
             <td>${coins}</td>
             <td>${prettyDate(donated_at)}</td>
             <td>${income_eur.toFixed(2)}</td>
             <td>${co_op}</td>
+            <td>
+                <button class="edit-donation" data-id="${id}">Edit</button>
+                <button class="delete-donation" data-id="${id}">Delete</button>
+            </td>
         `
     });
 
@@ -209,31 +213,50 @@ async function loadDbData() {
     });
 }
 
+function resetForm() {
+    const form = document.getElementById("add-donation-form");
+    form.reset();
+    document.getElementById("donation-id").value = "";
+    document.getElementById("donation-heading").innerText = "Add a new donation";
+    document.getElementById("donation-submit").innerText = "Add Donation";
+    document.getElementById("donation-cancel").style.display = "none";
+    document.getElementById("add-donation-status").innerText = "";
+}
+
 async function enableForms() {
-    document.getElementById("add-donation-form").addEventListener("submit", async (e) => {
+    const form = document.getElementById("add-donation-form");
+
+    form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
+        const id = document.getElementById("donation-id").value;
         const coins = parseInt(document.getElementById("donation-coins").value, 10);
         const income_eur = parseFloat(document.getElementById("donation-income").value);
         const co_op = "STUDIO-MATIC";
         const statusEl = document.getElementById("add-donation-status");
 
         try {
-            const res = await fetch(`${baseUrl}/donations`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ coins, income_eur, co_op })
-            });
+            let res;
+            if (id) {
+                res = await fetch(`${baseUrl}/donations/${id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ coins, income_eur, co_op })
+                });
+            } else {
+                res = await fetch(`${baseUrl}/donations`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ coins, income_eur, co_op })
+                });
+            }
 
             if (res.ok) {
-                statusEl.innerText = "Donation added ✅";
-                document.getElementById("add-donation-form").reset();
+                statusEl.innerText = id ? "Donation updated ✅" : "Donation added ✅";
+                resetForm();
                 loadDbData();
-
-                setTimeout(() => {
-                    statusEl.innerText = "";
-                }, 5000);
             } else {
                 const text = await res.text();
                 statusEl.innerText = `Failed ❌: ${text}`;
@@ -241,6 +264,40 @@ async function enableForms() {
         } catch (err) {
             console.error(err);
             statusEl.innerText = "Error connecting to backend ❌";
+        }
+    });
+
+    document.getElementById("donation-cancel").addEventListener("click", resetForm);
+
+    document.querySelector("#donations tbody").addEventListener("click", async (e) => {
+        if (e.target.classList.contains("delete-donation")) {
+            const id = e.target.dataset.id;
+            if (confirm("Are you sure you want to delete this donation?")) {
+                const res = await fetch(`${baseUrl}/donations/${id}`, {
+                    method: "DELETE",
+                    credentials: "include"
+                });
+                if (res.ok) {
+                    alert("Donation deleted ✅");
+                    loadDbData();
+                } else {
+                    alert(await res.text());
+                }
+            }
+        }
+
+        if (e.target.classList.contains("edit-donation")) {
+            const tr = e.target.closest("tr");
+            const id = e.target.dataset.id;
+            const cells = tr.children;
+
+            document.getElementById("donation-id").value = id;
+            document.getElementById("donation-coins").value = cells[0].innerText;
+            document.getElementById("donation-income").value = cells[2].innerText;
+
+            document.getElementById("donation-heading").innerText = "Update a donation";
+            document.getElementById("donation-submit").innerText = "Update Donation";
+            document.getElementById("donation-cancel").style.display = "inline";
         }
     });
 }

@@ -1,7 +1,7 @@
 use crate::{ApiResult, auth::validate};
 use axum::{
     Json,
-    extract::State,
+    extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
@@ -11,7 +11,13 @@ use thiserror::Error;
 use time::OffsetDateTime;
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(donations, add_donation))]
+#[openapi(paths(
+    get_donations,
+    get_donation,
+    post_donation,
+    put_donation,
+    delete_donation
+))]
 struct ApiDoc;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     use utoipa::OpenApi;
@@ -20,6 +26,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 
 #[derive(Error, Debug)]
 pub enum DonationError {
+    #[error("Donation not found")]
+    NotFound,
     #[error("Could not format")]
     FormatError(#[from] time::error::Format),
     #[error("Could not query database")]
@@ -29,6 +37,7 @@ pub enum DonationError {
 impl IntoResponse for DonationError {
     fn into_response(self) -> Response {
         let status = match self {
+            Self::NotFound => StatusCode::NOT_FOUND,
             Self::FormatError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
@@ -46,6 +55,13 @@ struct DonationResponse {
     donated_at: String,
     income_eur: f64,
     co_op: String,
+}
+
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct DonationRequest {
+    coins: u64,
+    income_eur: f64,
+    co_op: String, // TODO: validate to be either "S4L" or "STUDIO-MATIC"
 }
 
 #[utoipa::path(
@@ -67,7 +83,7 @@ struct DonationResponse {
         (status = StatusCode::INTERNAL_SERVER_ERROR)
     ),
 )]
-pub async fn donations(
+pub async fn get_donations(
     state_pool: State<MySqlPool>,
     headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
@@ -97,11 +113,54 @@ pub async fn donations(
     Ok((StatusCode::OK, Json(donations)))
 }
 
-#[derive(Deserialize, utoipa::ToSchema)]
-pub struct DonationRequest {
-    coins: u64,
-    income_eur: f64,
-    co_op: String, // TODO: validate to be either "S4L" or "STUDIO-MATIC"
+#[utoipa::path(
+    get,
+    path = "/donations/{id}",
+    responses(
+        (
+            status = StatusCode::OK,
+            body = DonationResponse,
+        ),
+        (
+            status = StatusCode::NOT_FOUND,
+            description = "Missing session_toke | Donation not found",
+        ),
+        (
+            status = StatusCode::UNAUTHORIZED,
+            description = "Not logged in",
+        ),
+        (status = StatusCode::INTERNAL_SERVER_ERROR)
+    ),
+)]
+pub async fn get_donation(
+    state_pool: State<MySqlPool>,
+    headers: HeaderMap,
+    Path(id): Path<u64>,
+) -> ApiResult<impl IntoResponse> {
+    let _ = validate(state_pool.clone(), headers).await?;
+    let donation: (u64, u64, OffsetDateTime, f64, String) = sqlx::query_as(
+        "SELECT id, coins, donated_at, income_eur, co_op FROM donations WHERE id = ? LIMIT 1",
+    )
+    .bind(id)
+    .fetch_optional(&state_pool.0)
+    .await
+    .map_err(DonationError::DatabaseError)?
+    .ok_or(DonationError::NotFound)?;
+
+    let (id, coins, donated_at, income_eur, co_op) = donation;
+
+    let donations = DonationResponse {
+        id,
+        coins,
+        donated_at: donated_at
+            .to_utc()
+            .format(&time::format_description::well_known::Rfc3339)
+            .map_err(DonationError::FormatError)?,
+        income_eur,
+        co_op,
+    };
+
+    Ok((StatusCode::OK, Json(donations)))
 }
 
 #[utoipa::path(
@@ -123,7 +182,7 @@ pub struct DonationRequest {
         (status = StatusCode::INTERNAL_SERVER_ERROR)
     )
 )]
-pub async fn add_donation(
+pub async fn post_donation(
     state_pool: State<MySqlPool>,
     headers: HeaderMap,
     Json(req): Json<DonationRequest>,
@@ -142,4 +201,91 @@ pub async fn add_donation(
     .map_err(DonationError::DatabaseError)?;
 
     Ok(StatusCode::CREATED)
+}
+
+#[utoipa::path(
+    put,
+    path = "/donations/{id}",
+    responses(
+        (
+            status = StatusCode::OK,
+        ),
+        (
+            status = StatusCode::NOT_FOUND,
+            description = "Missing session_toke | Donation not found",
+        ),
+        (
+            status = StatusCode::UNAUTHORIZED,
+            description = "Not logged in",
+        ),
+        (status = StatusCode::INTERNAL_SERVER_ERROR)
+    )
+)]
+pub async fn put_donation(
+    state_pool: State<MySqlPool>,
+    headers: HeaderMap,
+    Path(id): Path<u64>,
+    Json(req): Json<DonationRequest>,
+) -> ApiResult<impl IntoResponse> {
+    let _ = validate(state_pool.clone(), headers).await?;
+
+    let res = sqlx::query(
+        "UPDATE donations 
+            SET 
+                coins = ?,
+                income_eur = ?,
+                co_op =?
+        WHERE id = ?",
+    )
+    .bind(req.coins)
+    .bind(req.income_eur)
+    .bind(req.co_op)
+    .bind(id)
+    .execute(&state_pool.0)
+    .await
+    .map_err(DonationError::DatabaseError)?;
+
+    if res.rows_affected() == 0 {
+        Err(DonationError::NotFound.into())
+    } else {
+        Ok(StatusCode::OK)
+    }
+}
+
+#[utoipa::path(
+    delete,
+    path = "/donations/{id}",
+    responses(
+        (
+            status = StatusCode::NO_CONTENT,
+        ),
+        (
+            status = StatusCode::NOT_FOUND,
+            description = "Missing session_token | Donation not found",
+        ),
+        (
+            status = StatusCode::UNAUTHORIZED,
+            description = "Not logged in",
+        ),
+        (status = StatusCode::INTERNAL_SERVER_ERROR)
+    )
+)]
+pub async fn delete_donation(
+    state_pool: State<MySqlPool>,
+    headers: HeaderMap,
+    Path(id): Path<u64>,
+) -> ApiResult<impl IntoResponse> {
+    let _ = validate(state_pool.clone(), headers).await?;
+
+    let res = sqlx::query("DELETE FROM donations WHERE id = ?")
+        .bind(id)
+        .execute(&state_pool.0)
+        .await
+        .map_err(DonationError::DatabaseError)?;
+
+    if res.rows_affected() == 0 {
+        Err(DonationError::NotFound.into())
+    } else {
+        Ok(StatusCode::NO_CONTENT)
+    }
 }
