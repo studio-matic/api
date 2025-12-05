@@ -55,7 +55,7 @@ impl IntoResponse for SigninError {
 
 #[utoipa::path(
     post,
-    path = "/signin",
+    path = "/users/auth/signin",
     responses(
         (
             status = StatusCode::OK,

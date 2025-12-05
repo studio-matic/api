@@ -36,7 +36,7 @@ setInterval(checkBackend, 10000)
 
 async function welc() {
     const el = document.getElementById("welc");
-    const res = await fetch(`${baseUrl}/me`, {
+    const res = await fetch(`${baseUrl}/users/me`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include"
@@ -50,7 +50,7 @@ async function welc() {
 async function signup() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
-    const res = await fetch(`${baseUrl}/auth/signup`, {
+    const res = await fetch(`${baseUrl}/users/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -66,7 +66,7 @@ async function signup() {
 async function signin() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
-    const res = await fetch(`${baseUrl}/auth/signin`, {
+    const res = await fetch(`${baseUrl}/users/auth/signin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -82,7 +82,7 @@ async function signin() {
 }
 
 async function signout() {
-    const res = await fetch(`${baseUrl}/auth/signout`, {
+    const res = await fetch(`${baseUrl}/users/auth/signout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include"
@@ -92,7 +92,7 @@ async function signout() {
 }
 
 async function cookiesignin() {
-    const res = await fetch(`${baseUrl}/me`, {
+    const res = await fetch(`${baseUrl}/users/me`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include"
@@ -106,7 +106,7 @@ async function updateAuthUI() {
     const signup = document.getElementById("signup");
     const signin = document.getElementById("signin");
     const signout = document.getElementById("signout");
-    const res = await fetch(`${baseUrl}/auth/validate`, {
+    const res = await fetch(`${baseUrl}/users/auth/validate`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include"
@@ -127,7 +127,7 @@ async function updateAuthUI() {
 }
 
 async function redirLoggedOut() {
-    const res = await fetch(`${baseUrl}/auth/validate`, {
+    const res = await fetch(`${baseUrl}/users/auth/validate`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
         credentials: "include"

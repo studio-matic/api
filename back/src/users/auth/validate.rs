@@ -45,7 +45,7 @@ impl IntoResponse for ValidationError {
 
 #[utoipa::path(
     get,
-    path = "/auth/validate",
+    path = "/users/auth/validate",
     responses(
         (
             status = StatusCode::OK,

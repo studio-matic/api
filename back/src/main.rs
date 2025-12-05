@@ -1,4 +1,3 @@
-mod auth;
 mod donations;
 mod supporters;
 use axum::{
@@ -8,19 +7,20 @@ use axum::{
     routing,
 };
 mod health;
-mod me;
+mod users;
 use sqlx::MySqlPool;
 use std::{env, net::SocketAddr};
 use thiserror::Error;
 use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfig};
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use users::auth;
+use users::me;
 use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(utoipa::OpenApi)]
 struct ApiDoc;
 fn openapi() -> utoipa::openapi::OpenApi {
-    use crate::auth;
     use utoipa::OpenApi;
     let mut api = ApiDoc::openapi();
     api.merge(auth::signup::openapi());
@@ -46,10 +46,10 @@ async fn main() {
         .merge(SwaggerUi::new("/").url("/api-docs/openapi.json", openapi()))
         .route("/health", routing::get(health::health))
         .route("/auth/signup", routing::post(auth::signup))
-        .route("/auth/signin", routing::post(auth::signin))
-        .route("/auth/signout", routing::post(auth::signout))
-        .route("/auth/validate", routing::get(auth::validate))
-        .route("/me", routing::get(me::me))
+        .route("/users/auth/signin", routing::post(auth::signin))
+        .route("/users/auth/signout", routing::post(auth::signout))
+        .route("/users/auth/validate", routing::get(auth::validate))
+        .route("/users/me", routing::get(me::me))
         .route("/donations", routing::get(donations::get_donations))
         .route("/donations/{id}", routing::get(donations::get_donation))
         .route("/donations", routing::post(donations::post_donation))
