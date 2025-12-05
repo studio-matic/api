@@ -200,16 +200,27 @@ async function loadDbData() {
         `
     });
 
+    const donationsRes = await fetch(`${baseUrl}/donations`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include"
+    });
+    const donationsData = donationsRes.ok ? await donationsRes.json() : [];
+    const donationMap = new Map(donationsData.map(d => [d.id, d]));
+
     await loadTable({
         url: `${baseUrl}/supporters`,
         selector: "#supporters tbody",
         emptyText: "No supporters yet",
-        columns: ({ name, supported_at, income_eur, co_op }) => `
-            <td>${name}</td>
-            <td>${prettyDate(supported_at)}</td>
-            <td>${income_eur.toFixed(2)}</td>
-            <td>${co_op}</td>
-        `
+        columns: ({ id, name, donation_id }) => {
+            const donation = donationMap.get(donation_id);
+            return `
+                <td>${name}</td>
+                <td>${prettyDate(donation.donated_at)}</td>
+                <td>${donation.income_eur.toFixed(2)}</td>
+                <td>${donation.co_op}</td>
+            `;
+        }
     });
 }
 

@@ -43,9 +43,7 @@ impl IntoResponse for SupporterError {
 struct SupporterResponse {
     id: u64,
     name: String,
-    supported_at: String,
-    income_eur: f64,
-    co_op: String,
+    donation_id: u64,
 }
 
 #[utoipa::path(
@@ -72,27 +70,19 @@ pub async fn supporters(
     headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
     let _ = validate(state_pool.clone(), headers).await?;
-    let supporters: Vec<(u64, String, OffsetDateTime, f64, String)> = sqlx::query_as(
-        "SELECT supporters.id, supporters.name, donations.donated_at, donations.income_eur, donations.co_op
-            FROM supporters
-            JOIN donations ON donations.id = supporters.donation_id",
-    )
-    .fetch_all(&state_pool.0)
-    .await
-    .map_err(SupporterError::DatabaseError)?;
+    let supporters: Vec<(u64, String, u64)> =
+        sqlx::query_as("SELECT id, name, donation_id FROM supporters")
+            .fetch_all(&state_pool.0)
+            .await
+            .map_err(SupporterError::DatabaseError)?;
 
     let supporters = supporters
         .into_iter()
-        .map(|(a, b, c, d, e)| {
+        .map(|(a, b, c)| {
             Ok(SupporterResponse {
                 id: a,
                 name: b,
-                supported_at: c
-                    .to_utc()
-                    .format(&time::format_description::well_known::Rfc3339)
-                    .map_err(SupporterError::FormatError)?,
-                income_eur: d,
-                co_op: e,
+                donation_id: c,
             })
         })
         .collect::<ApiResult<Vec<_>>>()?;
