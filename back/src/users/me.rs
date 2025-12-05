@@ -9,7 +9,7 @@ use sqlx::MySqlPool;
 
 use crate::{
     ApiResult,
-    auth::validate::{self, ValidationError},
+    users::auth::validate::{self, ValidationError},
 };
 
 #[derive(utoipa::OpenApi)]
@@ -28,7 +28,7 @@ struct UserDataResponse {
 
 #[utoipa::path(
     get,
-    path = "/me",
+    path = "/users/me",
     responses(
         (
             status = StatusCode::OK,

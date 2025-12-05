@@ -1,4 +1,4 @@
-use crate::{ApiResult, auth::validate};
+use crate::{ApiResult, users::auth::validate};
 use axum::{
     Json,
     extract::{Path, State},
