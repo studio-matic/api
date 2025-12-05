@@ -57,6 +57,11 @@ struct DonationResponse {
     co_op: String,
 }
 
+#[derive(Serialize, utoipa::ToSchema)]
+struct DonationIdResponse {
+    id: u64,
+}
+
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct DonationRequest {
     coins: u64,
@@ -169,6 +174,7 @@ pub async fn get_donation(
     responses(
         (
             status = StatusCode::CREATED,
+            body = DonationIdResponse,
             description = "Successfully added donation",
         ),
         (
@@ -189,7 +195,7 @@ pub async fn post_donation(
 ) -> ApiResult<impl IntoResponse> {
     let _ = validate(state_pool.clone(), headers).await?;
 
-    let _ = sqlx::query(
+    let id = sqlx::query(
         "INSERT INTO donations (coins, income_eur, co_op)
         VALUES (?, ?, ?)",
     )
@@ -198,9 +204,10 @@ pub async fn post_donation(
     .bind(req.co_op)
     .execute(&state_pool.0)
     .await
-    .map_err(DonationError::DatabaseError)?;
+    .map_err(DonationError::DatabaseError)?
+    .last_insert_id();
 
-    Ok(StatusCode::CREATED)
+    Ok((StatusCode::CREATED, Json(DonationIdResponse { id })))
 }
 
 #[utoipa::path(

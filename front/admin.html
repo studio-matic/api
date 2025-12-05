@@ -53,12 +53,30 @@
                 <th>date</th>
                 <th>income (€)</th>
                 <th>co-op</th>
+                <th>actions</th>
             </tr>
         </thead>
         <tbody>
             <!-- Data rows will be inserted here by JS -->
         </tbody>
     </table>
+    <h3 id="supporter-heading">Add a new supporter</h3>
+    <form id="add-supporter-form">
+        <input type="hidden" id="supporter-id">
+        <label>
+            Name:
+            <input type="text" id="supporter-name" required>
+        </label>
+
+        <label id="supporter-income-label">
+            Income (€):
+            <input type="number" id="supporter-income" required step="0.01" min="0">
+        </label>
+
+        <button type="submit" id="supporter-submit">Add Supporter</button>
+        <button type="button" id="supporter-cancel" style="display:none;">Cancel</button>
+    </form>
+    <div id="add-supporter-status"></div>
     <script>loadDbData()</script>
     <script>enableForms()</script>
 </body>
