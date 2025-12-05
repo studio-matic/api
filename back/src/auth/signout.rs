@@ -18,7 +18,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 
 #[utoipa::path(
     post,
-    path = "/signout",
+    path = "/auth/signout",
     responses(
         (
             status = StatusCode::OK,

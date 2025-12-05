@@ -51,7 +51,7 @@ impl IntoResponse for SignupError {
 
 #[utoipa::path(
     post,
-    path = "/signup",
+    path = "/auth/signup",
     responses(
         (
             status = StatusCode::CREATED,
