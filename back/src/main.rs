@@ -116,6 +116,8 @@ enum ApiError {
     Signin(#[from] auth::signin::SigninError),
     #[error("could not sign up: {0}")]
     Signup(#[from] auth::signup::SignupError),
+    #[error("could not retreive user data: {0}")]
+    UserData(#[from] me::UserDataError),
     #[error("could not get donations: {0}")]
     Donation(#[from] donations::DonationError),
     #[error("could not get supporters: {0}")]
@@ -128,6 +130,7 @@ impl IntoResponse for ApiError {
             ApiError::Validation(e) => e.into_response(),
             ApiError::Signin(e) => e.into_response(),
             ApiError::Signup(e) => e.into_response(),
+            ApiError::UserData(e) => e.into_response(),
             ApiError::Donation(e) => e.into_response(),
             ApiError::Supporter(e) => e.into_response(),
         }
