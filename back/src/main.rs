@@ -55,21 +55,21 @@ async fn main() {
         .route("/users/auth/signout", routing::post(auth::signout))
         .route("/users/auth/validate", routing::get(auth::validate))
         .route("/users/me", routing::get(me::me))
-        .route("/donations", routing::get(donations::get_donations))
-        .route("/donations/{id}", routing::get(donations::get_donation))
-        .route("/donations", routing::post(donations::post_donation))
-        .route("/donations/{id}", routing::put(donations::put_donation))
+        .route("/donations", routing::get(donations::get::donations))
+        .route("/donations/{id}", routing::get(donations::get::donation))
+        .route("/donations", routing::post(donations::post::donation))
+        .route("/donations/{id}", routing::put(donations::put::donation))
         .route(
             "/donations/{id}",
-            routing::delete(donations::delete_donation),
+            routing::delete(donations::delete::donation),
         )
-        .route("/supporters", routing::get(supporters::get_supporters))
-        .route("/supporters/{id}", routing::get(supporters::get_supporter))
-        .route("/supporters", routing::post(supporters::post_supporter))
-        .route("/supporters/{id}", routing::put(supporters::put_supporter))
+        .route("/supporters", routing::get(supporters::get::supporters))
+        .route("/supporters/{id}", routing::get(supporters::get::supporter))
+        .route("/supporters", routing::post(supporters::post::supporter))
+        .route("/supporters/{id}", routing::put(supporters::put::supporter))
         .route(
             "/supporters/{id}",
-            routing::delete(supporters::delete_supporter),
+            routing::delete(supporters::delete::supporter),
         )
         .with_state(pool)
         .layer(GovernorLayer::new(GovernorConfig::default()))
