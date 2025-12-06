@@ -40,6 +40,11 @@ async fn main() {
         .await
         .expect("Unable to connect to mysql database");
 
+    sqlx::migrate!()
+        .run(&pool)
+        .await
+        .expect("Unable to perform mysql database migrations");
+
     tokio::spawn(auth::cleanup_expired_sessions(pool.clone()));
 
     let app = Router::new()
