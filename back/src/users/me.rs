@@ -44,7 +44,7 @@ struct UserDataResponse {
 pub async fn me(State(pool): State<MySqlPool>, headers: HeaderMap) -> ApiResult<impl IntoResponse> {
     let session_token = validate::extract_session_token(headers)?;
 
-    match sqlx::query_as(
+    match sqlx::query_as::<_, UserDataResponse>(
         "SELECT accounts.id, accounts.email
             FROM sessions
             JOIN accounts ON accounts.id = sessions.account_id
@@ -56,10 +56,7 @@ pub async fn me(State(pool): State<MySqlPool>, headers: HeaderMap) -> ApiResult<
     .await
     .map_err(ValidationError::DatabaseError)?
     {
-        Some(v) => {
-            let (id, email): (u64, String) = v;
-            Ok((StatusCode::OK, Json(UserDataResponse { id, email })))
-        }
+        Some(v) => Ok((StatusCode::OK, Json(v))),
         None => Err(ValidationError::InvalidToken.into()),
     }
 }
