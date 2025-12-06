@@ -9,23 +9,11 @@ nix develop . --no-pure-eval
 ./start.sh offline
 ```
 
-First-time DB setup:
-
-```sql
-source ./setup.sql
-```
-
 ## 2. Deployment
 
 ```bash
 nix develop . --no-pure-eval
 ./start.sh online
-```
-
-First-time DB setup:
-
-```sql
-source ./setup.sql
 ```
 
 ### Backend (Fly.io)

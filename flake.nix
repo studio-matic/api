@@ -65,6 +65,7 @@
               miniserve
               flyctl
               xdg-utils
+              sqlx-cli
             ];
           imports = [
             ./nix/mysql.nix
