@@ -74,10 +74,6 @@ pub struct SupporterRequest {
             body = Vec<SupporterResponse>,
         ),
         (
-            status = StatusCode::NOT_FOUND,
-            description = "Missing session_token",
-        ),
-        (
             status = StatusCode::UNAUTHORIZED,
             description = "Not logged in",
         ),
@@ -119,7 +115,7 @@ pub async fn get_supporters(
         ),
         (
             status = StatusCode::NOT_FOUND,
-            description = "Missing session_token | Supporter not found",
+            description = "Supporter not found",
         ),
         (
             status = StatusCode::UNAUTHORIZED,
@@ -164,10 +160,6 @@ pub async fn get_supporter(
             description = "Successfully added supporter",
         ),
         (
-            status = StatusCode::NOT_FOUND,
-            description = "Missing session_token",
-        ),
-        (
             status = StatusCode::UNAUTHORIZED,
             description = "Not logged in",
         ),
@@ -205,7 +197,7 @@ pub async fn post_supporter(
         ),
         (
             status = StatusCode::NOT_FOUND,
-            description = "Missing session_token | Supporter not found",
+            description = "Supporter not found",
         ),
         (
             status = StatusCode::UNAUTHORIZED,
@@ -252,7 +244,7 @@ pub async fn put_supporter(
         ),
         (
             status = StatusCode::NOT_FOUND,
-            description = "Missing session_token | Supporter not found",
+            description = "Supporter not found",
         ),
         (
             status = StatusCode::UNAUTHORIZED,

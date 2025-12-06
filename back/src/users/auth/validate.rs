@@ -31,10 +31,8 @@ pub enum ValidationError {
 impl IntoResponse for ValidationError {
     fn into_response(self) -> Response {
         let status = match self {
-            Self::NoCookies => StatusCode::NOT_FOUND,
-            Self::NoSessionToken => StatusCode::NOT_FOUND,
-            Self::InvalidToken => StatusCode::UNAUTHORIZED,
             Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            _ => StatusCode::UNAUTHORIZED,
         };
 
         let msg = self.to_string();
@@ -50,10 +48,6 @@ impl IntoResponse for ValidationError {
         (
             status = StatusCode::OK,
             description = "Successful login",
-        ),
-        (
-            status = StatusCode::NOT_FOUND,
-            description = "Missing session_token",
         ),
         (
             status = StatusCode::UNAUTHORIZED,
