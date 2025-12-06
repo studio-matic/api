@@ -78,10 +78,6 @@ pub struct DonationRequest {
             body = Vec<DonationResponse>,
         ),
         (
-            status = StatusCode::NOT_FOUND,
-            description = "Missing session_token",
-        ),
-        (
             status = StatusCode::UNAUTHORIZED,
             description = "Not logged in",
         ),
@@ -128,7 +124,7 @@ pub async fn get_donations(
         ),
         (
             status = StatusCode::NOT_FOUND,
-            description = "Missing session_toke | Donation not found",
+            description = "Donation not found",
         ),
         (
             status = StatusCode::UNAUTHORIZED,
@@ -178,10 +174,6 @@ pub async fn get_donation(
             description = "Successfully added donation",
         ),
         (
-            status = StatusCode::NOT_FOUND,
-            description = "Missing session_token",
-        ),
-        (
             status = StatusCode::UNAUTHORIZED,
             description = "Not logged in",
         ),
@@ -219,7 +211,7 @@ pub async fn post_donation(
         ),
         (
             status = StatusCode::NOT_FOUND,
-            description = "Missing session_toke | Donation not found",
+            description = "Donation not found",
         ),
         (
             status = StatusCode::UNAUTHORIZED,
@@ -268,7 +260,7 @@ pub async fn put_donation(
         ),
         (
             status = StatusCode::NOT_FOUND,
-            description = "Missing session_token | Donation not found",
+            description = "Donation not found",
         ),
         (
             status = StatusCode::UNAUTHORIZED,

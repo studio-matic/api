@@ -25,10 +25,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
             description = "Logged out"
         ),
         (
-            status = StatusCode::NOT_FOUND,
-            description = "Missing session_token",
-        ),
-        (
             status = StatusCode::UNAUTHORIZED,
             description = "Not logged in",
         ),

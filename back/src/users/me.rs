@@ -20,7 +20,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ApiDoc::openapi()
 }
 
-#[derive(Serialize, utoipa::ToSchema)]
+#[derive(Serialize, sqlx::FromRow, utoipa::ToSchema)]
 struct UserDataResponse {
     email: String,
     id: u64,
@@ -33,10 +33,6 @@ struct UserDataResponse {
         (
             status = StatusCode::OK,
             body = UserDataResponse
-        ),
-        (
-            status = StatusCode::NOT_FOUND,
-            description = "Missing session_token",
         ),
         (
             status = StatusCode::UNAUTHORIZED,
