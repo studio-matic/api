@@ -14,8 +14,6 @@ use thiserror::Error;
 use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfig};
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use users::auth;
-use users::me;
 use utoipa_swagger_ui::SwaggerUi;
 
 #[derive(utoipa::OpenApi)]
@@ -23,11 +21,12 @@ struct ApiDoc;
 fn openapi() -> utoipa::openapi::OpenApi {
     use utoipa::OpenApi;
     let mut api = ApiDoc::openapi();
-    api.merge(auth::signup::openapi());
-    api.merge(auth::signin::openapi());
-    api.merge(auth::signout::openapi());
-    api.merge(auth::validate::openapi());
-    api.merge(me::openapi());
+    api.merge(users::auth::signup::openapi());
+    api.merge(users::auth::signin::openapi());
+    api.merge(users::auth::signout::openapi());
+    api.merge(users::auth::validate::openapi());
+    api.merge(users::me::openapi());
+    api.merge(users::openapi());
     api.merge(health::openapi());
     api.merge(donations::openapi());
     api.merge(supporters::openapi());
@@ -45,16 +44,19 @@ async fn main() {
         .await
         .expect("Unable to perform mysql database migrations");
 
-    tokio::spawn(auth::cleanup_expired_sessions(pool.clone()));
+    tokio::spawn(users::auth::cleanup_expired_sessions(pool.clone()));
 
     let app = Router::new()
         .merge(SwaggerUi::new("/").url("/api-docs/openapi.json", openapi()))
         .route("/health", routing::get(health::health))
-        .route("/users/auth/signup", routing::post(auth::signup))
-        .route("/users/auth/signin", routing::post(auth::signin))
-        .route("/users/auth/signout", routing::post(auth::signout))
-        .route("/users/auth/validate", routing::get(auth::validate))
-        .route("/users/me", routing::get(me::me))
+        .route("/users", routing::get(users::get::users))
+        .route("/users/{id}", routing::get(users::get::user))
+        .route("/users/{id}", routing::delete(users::delete::user))
+        .route("/users/auth/signup", routing::post(users::auth::signup))
+        .route("/users/auth/signin", routing::post(users::auth::signin))
+        .route("/users/auth/signout", routing::post(users::auth::signout))
+        .route("/users/auth/validate", routing::get(users::auth::validate))
+        .route("/users/me", routing::get(users::me::me))
         .route("/donations", routing::get(donations::get::donations))
         .route("/donations/{id}", routing::get(donations::get::donation))
         .route("/donations", routing::post(donations::post::donation))
@@ -111,13 +113,13 @@ type ApiResult<T> = Result<T, ApiError>;
 #[derive(Error, Debug)]
 enum ApiError {
     #[error("could not validate session: {0}")]
-    Validation(#[from] auth::validate::ValidationError),
+    Validation(#[from] users::auth::validate::ValidationError),
     #[error("could not sign in: {0}")]
-    Signin(#[from] auth::signin::SigninError),
+    Signin(#[from] users::auth::signin::SigninError),
     #[error("could not sign up: {0}")]
-    Signup(#[from] auth::signup::SignupError),
+    Signup(#[from] users::auth::signup::SignupError),
     #[error("could not retreive user data: {0}")]
-    UserData(#[from] me::UserDataError),
+    UserData(#[from] users::UserDataError),
     #[error("could not get donations: {0}")]
     Donation(#[from] donations::DonationError),
     #[error("could not get supporters: {0}")]

@@ -1,14 +1,14 @@
+use crate::{
+    ApiResult,
+    users::{UserDataError, UserDataResponse, auth::validate},
+};
 use axum::{
     Json,
     extract::State,
     http::{HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
+    response::IntoResponse,
 };
-use serde::Serialize;
 use sqlx::MySqlPool;
-use thiserror::Error;
-
-use crate::{ApiResult, users::auth::validate};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(me))]
@@ -16,30 +16,6 @@ struct ApiDoc;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     use utoipa::OpenApi;
     ApiDoc::openapi()
-}
-
-#[derive(Error, Debug)]
-pub enum UserDataError {
-    #[error("Could not query database")]
-    DatabaseError(#[from] sqlx::Error),
-}
-
-impl IntoResponse for UserDataError {
-    fn into_response(self) -> Response {
-        let status = match self {
-            Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-
-        let msg = self.to_string();
-
-        (status, Json(msg)).into_response()
-    }
-}
-
-#[derive(Serialize, sqlx::FromRow, utoipa::ToSchema)]
-struct UserDataResponse {
-    email: String,
-    id: u64,
 }
 
 #[utoipa::path(

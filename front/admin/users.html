@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="../css/admin.css" rel="stylesheet">
+
+    <meta charset="UTF-8">
+    <title>Users</title>
+</head>
+
+<body>
+    <div id="status">checking backend ⏳</div>
+    <script src="../js/main.js"></script>
+    <script src="../js/admin/users.js"></script>
+    <script>redirLoggedOut()</script>
+
+    <h2>Welcome to the admin dashboard</h2>
+
+    <h3>Users</h3>
+    <table id="users" role="table">
+        <thead>
+            <tr>
+                <th>email</th>
+                <th>actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data rows will be inserted here by JS -->
+        </tbody>
+    </table>
+    <script>loadDbData()</script>
+    <script>enableForms()</script>
+</body>
+
+</html>
