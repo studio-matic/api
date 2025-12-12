@@ -1,7 +1,7 @@
 use crate::{
     ApiResult,
     supporters::{SupporterError, SupporterRequest},
-    users::auth::validate,
+    users::{UserRole, auth::validate},
 };
 use axum::{
     Json,
@@ -42,11 +42,11 @@ struct SupporterIdResponse {
     )
 )]
 pub async fn supporter(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
     Json(req): Json<SupporterRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate(state_pool.clone(), headers).await?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
 
     let id = sqlx::query(
         "INSERT INTO supporters (name, donation_id)
@@ -54,7 +54,7 @@ pub async fn supporter(
     )
     .bind(req.name)
     .bind(req.donation_id)
-    .execute(&state_pool.0)
+    .execute(&pool)
     .await
     .map_err(SupporterError::DatabaseError)?
     .last_insert_id();

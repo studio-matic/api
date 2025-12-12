@@ -1,6 +1,6 @@
 use crate::{
     ApiResult,
-    users::{UserDataError, UserDataResponse, auth::validate},
+    users::{UserDataError, UserDataResponse, UserRole, auth::validate},
 };
 use axum::{
     Json,
@@ -34,10 +34,12 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ),
 )]
 pub async fn me(State(pool): State<MySqlPool>, headers: HeaderMap) -> ApiResult<impl IntoResponse> {
-    let session_token = validate::extract_session_token(headers)?;
+    let _ = validate::validate_role(&pool, headers.clone(), UserRole::None).await?;
 
-    let user_data = sqlx::query_as::<_, UserDataResponse>(
-        "SELECT accounts.id, accounts.email
+    let session_token = validate::extract_session_token(headers.clone())?;
+
+    let user: (u64, String, UserRole) = sqlx::query_as(
+        "SELECT accounts.id, accounts.email, accounts.role
             FROM sessions
             JOIN accounts ON accounts.id = sessions.account_id
             WHERE sessions.token = ?
@@ -48,5 +50,15 @@ pub async fn me(State(pool): State<MySqlPool>, headers: HeaderMap) -> ApiResult<
     .await
     .map_err(UserDataError::DatabaseError)?;
 
-    Ok((StatusCode::OK, Json(user_data)))
+    let (id, email, role) = user;
+
+    let user = UserDataResponse {
+        id,
+        email,
+        role,
+
+        role_rank: u8::from(role),
+    };
+
+    Ok((StatusCode::OK, Json(user)))
 }

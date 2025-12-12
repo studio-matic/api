@@ -1,7 +1,7 @@
 use crate::{
     ApiResult,
     donations::{DonationError, DonationResponse},
-    users::auth::validate,
+    users::{UserRole, auth::validate},
 };
 use axum::{
     Json,
@@ -35,13 +35,14 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ),
 )]
 pub async fn donations(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate(state_pool.clone(), headers).await?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
+
     let donations: Vec<(u64, u64, OffsetDateTime, f64, String)> =
         sqlx::query_as("SELECT id, coins, donated_at, income_eur, co_op FROM donations")
-            .fetch_all(&state_pool.0)
+            .fetch_all(&pool)
             .await
             .map_err(DonationError::DatabaseError)?;
 
@@ -84,16 +85,17 @@ pub async fn donations(
     ),
 )]
 pub async fn donation(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate(state_pool.clone(), headers).await?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
+
     let donation: (u64, u64, OffsetDateTime, f64, String) = sqlx::query_as(
         "SELECT id, coins, donated_at, income_eur, co_op FROM donations WHERE id = ? LIMIT 1",
     )
     .bind(id)
-    .fetch_optional(&state_pool.0)
+    .fetch_optional(&pool)
     .await
     .map_err(DonationError::DatabaseError)?
     .ok_or(DonationError::NotFound)?;

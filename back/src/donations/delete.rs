@@ -1,4 +1,8 @@
-use crate::{ApiResult, donations::DonationError, users::auth::validate};
+use crate::{
+    ApiResult,
+    donations::DonationError,
+    users::{UserRole, auth::validate},
+};
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
@@ -33,15 +37,15 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     )
 )]
 pub async fn donation(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate(state_pool.clone(), headers).await?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
 
     let res = sqlx::query("DELETE FROM donations WHERE id = ?")
         .bind(id)
-        .execute(&state_pool.0)
+        .execute(&pool)
         .await
         .map_err(DonationError::DatabaseError)?;
 

@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
+use sqlx::Type;
 use thiserror::Error;
 
 pub mod auth;
@@ -40,10 +41,34 @@ impl IntoResponse for UserDataError {
     }
 }
 
-#[derive(Serialize, sqlx::FromRow, utoipa::ToSchema)]
+#[derive(Serialize, utoipa::ToSchema)]
 struct UserDataResponse {
-    email: String,
     id: u64,
+    email: String,
+    role: UserRole,
+    role_rank: u8,
+}
+
+#[derive(Clone, Copy, Serialize, Type, PartialEq, Eq, PartialOrd, Ord, utoipa::ToSchema)]
+#[serde(rename_all = "lowercase")]
+#[sqlx(rename_all = "lowercase")]
+pub enum UserRole {
+    None,
+    Editor,
+    Admin,
+    SuperAdmin,
+}
+
+// HACK: to implement hierarchical `>` and `<` for `WHERE` clauses
+impl From<UserRole> for u8 {
+    fn from(role: UserRole) -> Self {
+        match role {
+            UserRole::None => 1,
+            UserRole::Editor => 2,
+            UserRole::Admin => 3,
+            UserRole::SuperAdmin => 4,
+        }
+    }
 }
 
 pub mod delete;

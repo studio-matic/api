@@ -1,7 +1,7 @@
 use crate::{
     ApiResult,
     supporters::{SupporterError, SupporterResponse},
-    users::auth::validate,
+    users::{UserRole, auth::validate},
 };
 use axum::{
     Json,
@@ -35,13 +35,14 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ),
 )]
 pub async fn supporters(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate(state_pool.clone(), headers).await?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
+
     let supporters: Vec<(u64, String, u64)> =
         sqlx::query_as("SELECT id, name, donation_id FROM supporters")
-            .fetch_all(&state_pool.0)
+            .fetch_all(&pool)
             .await
             .map_err(SupporterError::DatabaseError)?;
 
@@ -79,16 +80,17 @@ pub async fn supporters(
     ),
 )]
 pub async fn supporter(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate(state_pool.clone(), headers).await?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
+
     let supporter: (u64, String, u64) = sqlx::query_as(
         "SELECT id, name, donation_id FROM supporters WHERE supporters.id = ? LIMIT 1",
     )
     .bind(id)
-    .fetch_optional(&state_pool.0)
+    .fetch_optional(&pool)
     .await
     .map_err(SupporterError::DatabaseError)?
     .ok_or(SupporterError::NotFound)?;

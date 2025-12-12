@@ -1,6 +1,6 @@
 use crate::{
     ApiResult,
-    users::{UserDataError, auth::validate},
+    users::{UserDataError, UserRole, auth::validate},
 };
 use axum::{
     extract::{Path, State},
@@ -32,25 +32,37 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
             status = StatusCode::UNAUTHORIZED,
             description = "Not logged in",
         ),
+        (
+            status = StatusCode::FORBIDDEN,
+            description = "Insufficient permissions",
+        ),
         (status = StatusCode::INTERNAL_SERVER_ERROR)
     )
 )]
 pub async fn user(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate::validate(state_pool.clone(), headers).await?;
+    let role = validate::validate_role(&pool, headers, UserRole::Admin).await?;
 
-    let res = sqlx::query("DELETE FROM accounts WHERE id = ?")
+    let _ = sqlx::query("SELECT 1 FROM accounts WHERE id = ? LIMIT 1")
         .bind(id)
-        .execute(&state_pool.0)
+        .fetch_optional(&pool)
         .await
-        .map_err(UserDataError::DatabaseError)?;
+        .map_err(UserDataError::DatabaseError)?
+        .ok_or(UserDataError::NotFound)?;
 
-    if res.rows_affected() == 0 {
-        Err(UserDataError::NotFound.into())
-    } else {
-        Ok(StatusCode::NO_CONTENT)
-    }
+    Ok(
+        sqlx::query("DELETE FROM accounts WHERE id = ? AND role < ?")
+            .bind(id)
+            .bind(u8::from(role))
+            .execute(&pool)
+            .await
+            .map_err(UserDataError::DatabaseError)?
+            .rows_affected()
+            .ne(&0)
+            .then_some(StatusCode::NO_CONTENT)
+            .ok_or(validate::ValidationError::InsufficientPermissions)?,
+    )
 }

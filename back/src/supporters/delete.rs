@@ -1,4 +1,8 @@
-use crate::{ApiResult, supporters::SupporterError, users::auth::validate};
+use crate::{
+    ApiResult,
+    supporters::SupporterError,
+    users::{UserRole, auth::validate},
+};
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
@@ -33,15 +37,15 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     )
 )]
 pub async fn supporter(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate(state_pool.clone(), headers).await?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
 
     let res = sqlx::query("DELETE FROM supporters WHERE id = ?")
         .bind(id)
-        .execute(&state_pool.0)
+        .execute(&pool)
         .await
         .map_err(SupporterError::DatabaseError)?;
 

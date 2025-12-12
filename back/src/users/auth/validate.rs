@@ -1,4 +1,4 @@
-use crate::ApiResult;
+use crate::{ApiResult, users::UserRole};
 use axum::{
     Json,
     extract::State,
@@ -24,6 +24,8 @@ pub enum ValidationError {
     NoSessionToken,
     #[error("Invalid session token")]
     InvalidToken,
+    #[error("Insufficient permissions")]
+    InsufficientPermissions,
     #[error("Could not query database")]
     DatabaseError(#[from] sqlx::Error),
 }
@@ -32,6 +34,7 @@ impl IntoResponse for ValidationError {
     fn into_response(self) -> Response {
         let status = match self {
             Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::InsufficientPermissions => StatusCode::FORBIDDEN,
             _ => StatusCode::UNAUTHORIZED,
         };
 
@@ -78,6 +81,31 @@ pub async fn validate(
     } else {
         Err(ValidationError::InvalidToken.into())
     }
+}
+
+pub async fn validate_role(
+    pool: &MySqlPool,
+    headers: HeaderMap,
+    role: UserRole,
+) -> ApiResult<UserRole> {
+    let session_token = extract_session_token(headers.clone())?;
+
+    Ok(sqlx::query_scalar::<_, UserRole>(
+        "SELECT accounts.role
+                    FROM sessions JOIN accounts ON sessions.account_id = accounts.id
+                        WHERE sessions.token = ?
+                    LIMIT 1",
+    )
+    .bind(session_token)
+    .fetch_optional(pool)
+    .await
+    .map_err(ValidationError::DatabaseError)?
+    .ok_or(ValidationError::InvalidToken)
+    .and_then(|r| {
+        (r >= role)
+            .then_some(r)
+            .ok_or(ValidationError::InsufficientPermissions)
+    })?)
 }
 
 pub fn extract_session_token(headers: HeaderMap) -> ApiResult<String> {

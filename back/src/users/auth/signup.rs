@@ -1,5 +1,5 @@
 use super::SignRequest;
-use crate::ApiResult;
+use crate::{ApiResult, users::UserRole};
 use argon2::{
     Argon2,
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
@@ -89,9 +89,10 @@ pub async fn signup(
         .map_err(|e| SignupError::PasswordHashError(e.to_string()))?
         .to_string();
 
-    match sqlx::query("INSERT INTO accounts (email, password) VALUES (?, ?)")
+    match sqlx::query("INSERT INTO accounts (email, password, role) VALUES (?, ?, ?)")
         .bind(&email)
         .bind(&hashed_password)
+        .bind(UserRole::Editor)
         .execute(&pool)
         .await
     {

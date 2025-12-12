@@ -1,7 +1,7 @@
 use crate::{
     ApiResult,
     supporters::{SupporterError, SupporterRequest},
-    users::auth::validate,
+    users::{UserRole, auth::validate},
 };
 use axum::{
     Json,
@@ -39,12 +39,12 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     )
 )]
 pub async fn supporter(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
     Path(id): Path<u64>,
     Json(req): Json<SupporterRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate(state_pool.clone(), headers).await?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
 
     let res = sqlx::query(
         "UPDATE supporters 
@@ -56,7 +56,7 @@ pub async fn supporter(
     .bind(req.name)
     .bind(req.donation_id)
     .bind(id)
-    .execute(&state_pool.0)
+    .execute(&pool)
     .await
     .map_err(SupporterError::DatabaseError)?;
 

@@ -1,6 +1,6 @@
 async function loadTable({ url, selector, emptyText, columns }) {
     const tbody = document.querySelector(selector);
-    tbody.innerHTML = `<tr><td colspan="2">Loading…</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3">Loading…</td></tr>`;
 
     try {
         const res = await fetch(url, {
@@ -10,7 +10,7 @@ async function loadTable({ url, selector, emptyText, columns }) {
         });
 
         if (!res.ok) {
-            tbody.innerHTML = `<tr><td colspan="2">Failed to load data ❌</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="3">Failed to load data ❌</td></tr>`;
             return;
         }
 
@@ -18,7 +18,7 @@ async function loadTable({ url, selector, emptyText, columns }) {
         tbody.innerHTML = "";
 
         if (!data.length) {
-            tbody.innerHTML = `<tr><td colspan="2">${emptyText}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="3">${emptyText}</td></tr>`;
             return;
         }
 
@@ -30,19 +30,32 @@ async function loadTable({ url, selector, emptyText, columns }) {
 
     } catch (err) {
         console.error(err);
-        tbody.innerHTML = `<tr><td colspan="2">Error connecting to backend ❌</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="3">Error connecting to backend ❌</td></tr>`;
     }
 }
 
 async function loadDbData() {
+    const res = await fetch(`${baseUrl}/users/me`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include"
+    });
+
+    const me = await res.json();
+    const activeUserRank = me.role_rank;
+
     await loadTable({
         url: `${baseUrl}/users`,
         selector: "#users tbody",
         emptyText: "No users yet",
-        columns: ({ id, email }) => `
+        columns: ({ id, email, role, role_rank }) => `
             <td>${email}</td>
+            <td>${role}</td>
             <td>
-                <button class="delete-user" data-id="${id}">Delete</button>
+                ${activeUserRank > role_rank
+                ? `<button class="delete-user" data-id="${id}">Delete</button>`
+                : ""
+            }
             </td>
         `
     });
@@ -68,4 +81,18 @@ function enableForms() {
             }
         }
     });
+}
+
+async function redirUnauthorized() {
+    const res = await fetch(`${baseUrl}/users/me`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include"
+    });
+    const { role } = await res.json();
+    if (!res.ok || role !== "admin" && role !== "superadmin") {
+        alert(`Must be an admin`)
+        const returnUrl = encodeURIComponent(window.location.pathname);
+        window.location.href = `${hostingPrefix}/login?next=${returnUrl}`;
+    }
 }

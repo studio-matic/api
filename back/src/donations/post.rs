@@ -1,7 +1,7 @@
 use crate::{
     ApiResult,
     donations::{DonationError, DonationRequest},
-    users::auth::validate,
+    users::{UserRole, auth::validate},
 };
 use axum::{
     Json,
@@ -42,11 +42,11 @@ struct DonationIdResponse {
     )
 )]
 pub async fn donation(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
     Json(req): Json<DonationRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate(state_pool.clone(), headers).await?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
 
     let id = sqlx::query(
         "INSERT INTO donations (coins, income_eur, co_op)
@@ -55,7 +55,7 @@ pub async fn donation(
     .bind(req.coins)
     .bind(req.income_eur)
     .bind(req.co_op)
-    .execute(&state_pool.0)
+    .execute(&pool)
     .await
     .map_err(DonationError::DatabaseError)?
     .last_insert_id();

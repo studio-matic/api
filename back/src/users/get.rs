@@ -1,6 +1,6 @@
 use crate::{
     ApiResult,
-    users::{UserDataError, UserDataResponse, auth::validate},
+    users::{UserDataError, UserDataResponse, UserRole, auth::validate},
 };
 use axum::{
     Json,
@@ -30,23 +30,34 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
             status = StatusCode::UNAUTHORIZED,
             description = "Not logged in",
         ),
+        (
+            status = StatusCode::FORBIDDEN,
+            description = "Insufficient permissions",
+        ),
         (status = StatusCode::INTERNAL_SERVER_ERROR)
     ),
 )]
 pub async fn users(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate::validate(state_pool.clone(), headers).await?;
-    let users: Vec<(u64, String)> = sqlx::query_as("SELECT id, email FROM accounts")
-        .fetch_all(&state_pool.0)
-        .await
-        .map_err(UserDataError::DatabaseError)?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Admin).await?;
+
+    let users: Vec<(u64, String, UserRole)> =
+        sqlx::query_as("SELECT id, email, role FROM accounts")
+            .fetch_all(&pool)
+            .await
+            .map_err(UserDataError::DatabaseError)?;
 
     let users = users
         .into_iter()
-        .map(|(id, email)| Ok(UserDataResponse { id, email }))
-        .collect::<ApiResult<Vec<_>>>()?;
+        .map(|(id, email, role)| UserDataResponse {
+            id,
+            email,
+            role,
+            role_rank: u8::from(role),
+        })
+        .collect::<Vec<_>>();
 
     Ok((StatusCode::OK, Json(users)))
 }
@@ -67,25 +78,36 @@ pub async fn users(
             status = StatusCode::UNAUTHORIZED,
             description = "Not logged in",
         ),
+        (
+            status = StatusCode::FORBIDDEN,
+            description = "Insufficient permissions",
+        ),
         (status = StatusCode::INTERNAL_SERVER_ERROR)
     ),
 )]
 pub async fn user(
-    state_pool: State<MySqlPool>,
+    State(pool): State<MySqlPool>,
     headers: HeaderMap,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate::validate(state_pool.clone(), headers).await?;
-    let user: (u64, String) = sqlx::query_as("SELECT id, email FROM accounts WHERE id = ? LIMIT 1")
-        .bind(id)
-        .fetch_optional(&state_pool.0)
-        .await
-        .map_err(UserDataError::DatabaseError)?
-        .ok_or(UserDataError::NotFound)?;
+    let _ = validate::validate_role(&pool, headers, UserRole::Admin).await?;
 
-    let (id, email) = user;
+    let user: (u64, String, UserRole) =
+        sqlx::query_as("SELECT id, email, role FROM accounts WHERE id = ? LIMIT 1")
+            .bind(id)
+            .fetch_optional(&pool)
+            .await
+            .map_err(UserDataError::DatabaseError)?
+            .ok_or(UserDataError::NotFound)?;
 
-    let user = UserDataResponse { id, email };
+    let (id, email, role) = user;
+
+    let user = UserDataResponse {
+        id,
+        email,
+        role,
+        role_rank: u8::from(role),
+    };
 
     Ok((StatusCode::OK, Json(user)))
 }
