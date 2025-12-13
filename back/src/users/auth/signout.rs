@@ -35,7 +35,7 @@ pub async fn signout(
     State(pool): State<MySqlPool>,
     headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
-    let token = extract_session_token(headers)?;
+    let token = extract_session_token(&headers)?;
 
     let _ = sqlx::query("DELETE FROM sessions WHERE token = ?")
         .bind(&token)

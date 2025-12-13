@@ -6,7 +6,7 @@ use crate::{
 use axum::{
     Json,
     extract::{Path, State},
-    http::{HeaderMap, StatusCode},
+    http::StatusCode,
     response::IntoResponse,
 };
 use sqlx::MySqlPool;
@@ -36,9 +36,11 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 )]
 pub async fn donations(
     State(pool): State<MySqlPool>,
-    headers: HeaderMap,
+    role: UserRole,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
+    if role < UserRole::Editor {
+        Err(validate::ValidationError::InsufficientPermissions)?;
+    }
 
     let donations: Vec<(u64, u64, OffsetDateTime, f64, String)> =
         sqlx::query_as("SELECT id, coins, donated_at, income_eur, co_op FROM donations")
@@ -86,10 +88,12 @@ pub async fn donations(
 )]
 pub async fn donation(
     State(pool): State<MySqlPool>,
-    headers: HeaderMap,
+    role: UserRole,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
+    if role < UserRole::Editor {
+        Err(validate::ValidationError::InsufficientPermissions)?;
+    }
 
     let donation: (u64, u64, OffsetDateTime, f64, String) = sqlx::query_as(
         "SELECT id, coins, donated_at, income_eur, co_op FROM donations WHERE id = ? LIMIT 1",

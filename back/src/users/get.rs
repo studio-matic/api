@@ -5,7 +5,7 @@ use crate::{
 use axum::{
     Json,
     extract::{Path, State},
-    http::{HeaderMap, StatusCode},
+    http::StatusCode,
     response::IntoResponse,
 };
 use sqlx::MySqlPool;
@@ -39,9 +39,11 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 )]
 pub async fn users(
     State(pool): State<MySqlPool>,
-    headers: HeaderMap,
+    role: UserRole,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate::validate_role(&pool, headers, UserRole::Admin).await?;
+    if role < UserRole::Admin {
+        Err(validate::ValidationError::InsufficientPermissions)?;
+    }
 
     let users: Vec<(u64, String, UserRole)> =
         sqlx::query_as("SELECT id, email, role FROM accounts")
@@ -87,10 +89,12 @@ pub async fn users(
 )]
 pub async fn user(
     State(pool): State<MySqlPool>,
-    headers: HeaderMap,
+    role: UserRole,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate::validate_role(&pool, headers, UserRole::Admin).await?;
+    if role < UserRole::Admin {
+        Err(validate::ValidationError::InsufficientPermissions)?;
+    }
 
     let user: (u64, String, UserRole) =
         sqlx::query_as("SELECT id, email, role FROM accounts WHERE id = ? LIMIT 1")

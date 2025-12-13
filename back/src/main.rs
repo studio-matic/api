@@ -111,7 +111,7 @@ async fn main() {
 type ApiResult<T> = Result<T, ApiError>;
 
 #[derive(Error, Debug)]
-enum ApiError {
+pub enum ApiError {
     #[error("could not validate session: {0}")]
     Validation(#[from] users::auth::validate::ValidationError),
     #[error("could not sign in: {0}")]

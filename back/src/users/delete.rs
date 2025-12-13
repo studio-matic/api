@@ -4,7 +4,7 @@ use crate::{
 };
 use axum::{
     extract::{Path, State},
-    http::{HeaderMap, StatusCode},
+    http::StatusCode,
     response::IntoResponse,
 };
 use sqlx::MySqlPool;
@@ -41,10 +41,12 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 )]
 pub async fn user(
     State(pool): State<MySqlPool>,
-    headers: HeaderMap,
+    role: UserRole,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
-    let role = validate::validate_role(&pool, headers, UserRole::Admin).await?;
+    if role < UserRole::Admin {
+        Err(validate::ValidationError::InsufficientPermissions)?;
+    }
 
     let _ = sqlx::query("SELECT 1 FROM accounts WHERE id = ? LIMIT 1")
         .bind(id)

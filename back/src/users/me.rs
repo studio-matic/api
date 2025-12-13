@@ -33,10 +33,12 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         (status = StatusCode::INTERNAL_SERVER_ERROR)
     ),
 )]
-pub async fn me(State(pool): State<MySqlPool>, headers: HeaderMap) -> ApiResult<impl IntoResponse> {
-    let _ = validate::validate_role(&pool, headers.clone(), UserRole::None).await?;
-
-    let session_token = validate::extract_session_token(headers.clone())?;
+pub async fn me(
+    State(pool): State<MySqlPool>,
+    headers: HeaderMap,
+    _: UserRole,
+) -> ApiResult<impl IntoResponse> {
+    let token = validate::extract_session_token(&headers)?;
 
     let user: (u64, String, UserRole) = sqlx::query_as(
         "SELECT accounts.id, accounts.email, accounts.role
@@ -45,7 +47,7 @@ pub async fn me(State(pool): State<MySqlPool>, headers: HeaderMap) -> ApiResult<
             WHERE sessions.token = ?
             LIMIT 1",
     )
-    .bind(session_token)
+    .bind(token)
     .fetch_one(&pool)
     .await
     .map_err(UserDataError::DatabaseError)?;

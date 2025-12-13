@@ -3,12 +3,7 @@ use crate::{
     supporters::{SupporterError, SupporterRequest},
     users::{UserRole, auth::validate},
 };
-use axum::{
-    Json,
-    extract::State,
-    http::{HeaderMap, StatusCode},
-    response::IntoResponse,
-};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Serialize;
 use sqlx::MySqlPool;
 
@@ -43,10 +38,12 @@ struct SupporterIdResponse {
 )]
 pub async fn supporter(
     State(pool): State<MySqlPool>,
-    headers: HeaderMap,
     Json(req): Json<SupporterRequest>,
+    role: UserRole,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
+    if role < UserRole::Editor {
+        Err(validate::ValidationError::InsufficientPermissions)?;
+    }
 
     let id = sqlx::query(
         "INSERT INTO supporters (name, donation_id)

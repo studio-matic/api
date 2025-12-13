@@ -1,8 +1,8 @@
-use crate::{ApiResult, users::UserRole};
+use crate::{ApiError, ApiResult, users::UserRole};
 use axum::{
     Json,
-    extract::State,
-    http::{HeaderMap, StatusCode, header},
+    extract::{FromRequestParts, State},
+    http::{HeaderMap, StatusCode, header, request::Parts},
     response::{IntoResponse, Response},
 };
 use sqlx::MySqlPool;
@@ -63,7 +63,7 @@ pub async fn validate(
     State(pool): State<MySqlPool>,
     headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
-    let session_token = extract_session_token(headers)?;
+    let token = extract_session_token(&headers)?;
 
     if sqlx::query(
         "SELECT 1
@@ -71,7 +71,7 @@ pub async fn validate(
             WHERE token = ?
             LIMIT 1",
     )
-    .bind(session_token)
+    .bind(token)
     .fetch_optional(&pool)
     .await
     .map_err(ValidationError::DatabaseError)?
@@ -83,12 +83,8 @@ pub async fn validate(
     }
 }
 
-pub async fn validate_role(
-    pool: &MySqlPool,
-    headers: HeaderMap,
-    role: UserRole,
-) -> ApiResult<UserRole> {
-    let session_token = extract_session_token(headers.clone())?;
+pub async fn get_role(pool: &MySqlPool, headers: &HeaderMap) -> ApiResult<UserRole> {
+    let token = extract_session_token(headers)?;
 
     Ok(sqlx::query_scalar::<_, UserRole>(
         "SELECT accounts.role
@@ -96,19 +92,25 @@ pub async fn validate_role(
                         WHERE sessions.token = ?
                     LIMIT 1",
     )
-    .bind(session_token)
+    .bind(token)
     .fetch_optional(pool)
     .await
     .map_err(ValidationError::DatabaseError)?
-    .ok_or(ValidationError::InvalidToken)
-    .and_then(|r| {
-        (r >= role)
-            .then_some(r)
-            .ok_or(ValidationError::InsufficientPermissions)
-    })?)
+    .ok_or(ValidationError::InvalidToken)?)
 }
 
-pub fn extract_session_token(headers: HeaderMap) -> ApiResult<String> {
+impl FromRequestParts<MySqlPool> for UserRole {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(
+        Parts { headers, .. }: &mut Parts,
+        pool: &MySqlPool,
+    ) -> Result<Self, Self::Rejection> {
+        get_role(pool, headers).await
+    }
+}
+
+pub fn extract_session_token(headers: &HeaderMap) -> ApiResult<String> {
     let cookie_header = headers
         .get(header::COOKIE)
         .ok_or(ValidationError::NoCookies)?;

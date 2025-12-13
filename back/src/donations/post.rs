@@ -3,12 +3,7 @@ use crate::{
     donations::{DonationError, DonationRequest},
     users::{UserRole, auth::validate},
 };
-use axum::{
-    Json,
-    extract::State,
-    http::{HeaderMap, StatusCode},
-    response::IntoResponse,
-};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Serialize;
 use sqlx::MySqlPool;
 
@@ -43,10 +38,11 @@ struct DonationIdResponse {
 )]
 pub async fn donation(
     State(pool): State<MySqlPool>,
-    headers: HeaderMap,
     Json(req): Json<DonationRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let _ = validate::validate_role(&pool, headers, UserRole::Editor).await?;
+    if role < UserRole::Editor {
+        Err(validate::ValidationError::InsufficientPermissions)?;
+    }
 
     let id = sqlx::query(
         "INSERT INTO donations (coins, income_eur, co_op)
