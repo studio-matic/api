@@ -7,6 +7,8 @@ use serde::Serialize;
 use sqlx::Type;
 use thiserror::Error;
 
+pub mod email;
+
 pub mod auth;
 pub mod me;
 

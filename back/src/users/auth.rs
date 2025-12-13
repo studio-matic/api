@@ -1,3 +1,4 @@
+use crate::users::email::EmailAddress;
 use rand::Rng;
 use serde::Deserialize;
 use sqlx::MySqlPool;
@@ -7,7 +8,7 @@ const SESSION_TOKEN_MAX_AGE: Duration = Duration::from_hours(1);
 
 #[derive(Deserialize, utoipa::ToSchema)]
 pub struct SignRequest {
-    email: String,
+    email: EmailAddress,
     password: String,
 }
 

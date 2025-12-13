@@ -10,8 +10,6 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use emval::ValidationError as EmailValidationError;
-use tokio::task;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(signup))]
@@ -23,8 +21,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 
 #[derive(thiserror::Error, Debug)]
 pub enum SignupError {
-    #[error("Invalid email: {0}")]
-    InvalidEmail(String),
     #[error("Account already exists")]
     Conflict,
     #[error("Could not hash password: {0}")]
@@ -36,7 +32,6 @@ pub enum SignupError {
 impl IntoResponse for SignupError {
     fn into_response(self) -> Response {
         let status = match self {
-            Self::InvalidEmail(_) => StatusCode::BAD_REQUEST,
             Self::Conflict => StatusCode::CONFLICT,
             Self::PasswordHashError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -57,7 +52,7 @@ impl IntoResponse for SignupError {
             description = "Successful signup",
         ),
         (
-            status = StatusCode::BAD_REQUEST,
+            status = StatusCode::UNPROCESSABLE_ENTITY,
             description = "Invalid email",
         ),
         (
@@ -73,16 +68,6 @@ pub async fn signup(
     State(AppState { pool }): State<AppState>,
     Json(SignRequest { email, password }): Json<SignRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let email = task::spawn_blocking(|| emval::validate_email(email))
-        .await
-        .expect("Unable to join email validation thread")
-        .map_err(|e| {
-            SignupError::InvalidEmail(match e {
-                EmailValidationError::SyntaxError(e) | EmailValidationError::ValueError(e) => e,
-            })
-        })?
-        .normalized;
-
     let hashed_password = Argon2::default()
         .hash_password(password.as_bytes(), &SaltString::generate(&mut OsRng))
         .map_err(|e| SignupError::PasswordHashError(e.to_string()))?

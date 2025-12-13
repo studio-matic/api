@@ -7,8 +7,6 @@ use axum::{
     http::{StatusCode, header},
     response::{AppendHeaders, IntoResponse, Response},
 };
-use emval::ValidationError as EmailValidationError;
-use tokio::task;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(signin))]
@@ -20,8 +18,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 
 #[derive(thiserror::Error, Debug)]
 pub enum SigninError {
-    #[error("Invalid email: {0}")]
-    InvalidEmail(String),
     #[error("Password incorrect")]
     IncorrectPassword,
     #[error("Account not found")]
@@ -37,7 +33,6 @@ pub enum SigninError {
 impl IntoResponse for SigninError {
     fn into_response(self) -> Response {
         let status = match self {
-            Self::InvalidEmail(_) => StatusCode::BAD_REQUEST,
             Self::IncorrectPassword => StatusCode::UNAUTHORIZED,
             Self::AccountNotFound => StatusCode::NOT_FOUND,
             Self::SessionError(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -60,7 +55,7 @@ impl IntoResponse for SigninError {
             description = "Successful signin"
         ),
         (
-            status = StatusCode::BAD_REQUEST,
+            status = StatusCode::UNPROCESSABLE_ENTITY,
             description = "Invalid email",
         ),
         (
@@ -78,16 +73,6 @@ pub async fn signin(
     State(AppState { pool }): State<AppState>,
     Json(SignRequest { email, password }): Json<SignRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let email = task::spawn_blocking(|| emval::validate_email(email))
-        .await
-        .expect("Unable to join email validation thread")
-        .map_err(|e| {
-            SigninError::InvalidEmail(match e {
-                EmailValidationError::SyntaxError(e) | EmailValidationError::ValueError(e) => e,
-            })
-        })?
-        .normalized;
-
     let (id, hashed_password): (u64, String) =
         sqlx::query_as("SELECT id, password FROM accounts WHERE email = ? LIMIT 1")
             .bind(&email)
