@@ -20,7 +20,7 @@ fn generate_session_token() -> String {
         .collect()
 }
 
-pub async fn cleanup_expired_sessions(pool: MySqlPool) {
+pub async fn cleanup_expired_sessions(pool: MySqlPool) -> ! {
     let mut interval = tokio::time::interval(Duration::from_mins(5));
     loop {
         interval.tick().await;
