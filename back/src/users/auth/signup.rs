@@ -2,7 +2,7 @@ use super::SignRequest;
 use crate::{ApiResult, AppState, users::UserRole};
 use argon2::{
     Argon2,
-    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
+    password_hash::{self, PasswordHasher, SaltString, rand_core::OsRng},
 };
 use axum::{
     Json,
@@ -24,7 +24,7 @@ pub enum SignupError {
     #[error("Account already exists")]
     Conflict,
     #[error("Could not hash password: {0}")]
-    PasswordHashError(String),
+    PasswordHashError(#[from] password_hash::Error),
     #[error("Could not query database")]
     DatabaseError(#[from] sqlx::Error),
 }
@@ -70,7 +70,7 @@ pub async fn signup(
 ) -> ApiResult<impl IntoResponse> {
     let hashed_password = Argon2::default()
         .hash_password(password.as_bytes(), &SaltString::generate(&mut OsRng))
-        .map_err(|e| SignupError::PasswordHashError(e.to_string()))?
+        .map_err(SignupError::PasswordHashError)?
         .to_string();
 
     match sqlx::query("INSERT INTO accounts (email, password, role) VALUES (?, ?, ?)")

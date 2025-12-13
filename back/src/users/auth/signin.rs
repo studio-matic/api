@@ -1,6 +1,6 @@
 use super::{SESSION_TOKEN_MAX_AGE, SignRequest, generate_session_token};
-use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use crate::{ApiResult, AppState};
+use argon2::{Argon2, PasswordHash, PasswordVerifier, password_hash};
 use axum::{
     Json,
     extract::State,
@@ -25,7 +25,7 @@ pub enum SigninError {
     #[error("Could not save session token: {0}")]
     SessionError(String),
     #[error("Could not hash password: {0}")]
-    PasswordHashError(String),
+    PasswordHashError(#[from] password_hash::Error),
     #[error("Could not query database")]
     DatabaseError(#[from] sqlx::Error),
 }
@@ -84,8 +84,7 @@ pub async fn signin(
     if Argon2::default()
         .verify_password(
             password.as_bytes(),
-            &PasswordHash::new(&hashed_password)
-                .map_err(|e| SigninError::PasswordHashError(e.to_string()))?,
+            &PasswordHash::new(&hashed_password).map_err(SigninError::PasswordHashError)?,
         )
         .is_ok()
     {
