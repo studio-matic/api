@@ -1,5 +1,5 @@
 use crate::{
-    ApiResult,
+    ApiResult, AppState,
     donations::{DonationError, DonationResponse},
     users::{UserRole, auth::validate},
 };
@@ -9,7 +9,6 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use sqlx::MySqlPool;
 use time::OffsetDateTime;
 
 #[derive(utoipa::OpenApi)]
@@ -35,7 +34,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ),
 )]
 pub async fn donations(
-    State(pool): State<MySqlPool>,
+    State(AppState { pool }): State<AppState>,
     role: UserRole,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
@@ -87,7 +86,7 @@ pub async fn donations(
     ),
 )]
 pub async fn donation(
-    State(pool): State<MySqlPool>,
+    State(AppState { pool }): State<AppState>,
     role: UserRole,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {

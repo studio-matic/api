@@ -1,5 +1,5 @@
 use crate::{
-    ApiResult,
+    ApiResult, AppState,
     donations::{DonationError, DonationRequest},
     users::{UserRole, auth::validate},
 };
@@ -9,7 +9,6 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use sqlx::MySqlPool;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(donation))]
@@ -38,10 +37,14 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     )
 )]
 pub async fn donation(
-    State(pool): State<MySqlPool>,
+    State(AppState { pool }): State<AppState>,
     role: UserRole,
     Path(id): Path<u64>,
-    Json(req): Json<DonationRequest>,
+    Json(DonationRequest {
+        coins,
+        income_eur,
+        co_op,
+    }): Json<DonationRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
         Err(validate::ValidationError::InsufficientPermissions)?;
@@ -55,9 +58,9 @@ pub async fn donation(
                 co_op =?
         WHERE id = ?",
     )
-    .bind(req.coins)
-    .bind(req.income_eur)
-    .bind(req.co_op)
+    .bind(coins)
+    .bind(income_eur)
+    .bind(co_op)
     .bind(id)
     .execute(&pool)
     .await

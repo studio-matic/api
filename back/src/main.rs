@@ -73,7 +73,7 @@ async fn main() {
             "/supporters/{id}",
             routing::delete(supporters::delete::supporter),
         )
-        .with_state(pool)
+        .with_state(AppState { pool })
         .layer(GovernorLayer::new(GovernorConfig::default()))
         .layer(
             CorsLayer::new()
@@ -137,4 +137,9 @@ impl IntoResponse for ApiError {
             ApiError::Supporter(e) => e.into_response(),
         }
     }
+}
+
+#[derive(Clone)]
+pub struct AppState {
+    pool: MySqlPool,
 }

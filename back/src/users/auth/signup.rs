@@ -1,5 +1,5 @@
 use super::SignRequest;
-use crate::{ApiResult, users::UserRole};
+use crate::{ApiResult, AppState, users::UserRole};
 use argon2::{
     Argon2,
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
@@ -11,7 +11,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use emval::ValidationError as EmailValidationError;
-use sqlx::MySqlPool;
 use tokio::task;
 
 #[derive(utoipa::OpenApi)]
@@ -71,10 +70,10 @@ impl IntoResponse for SignupError {
     ),
 )]
 pub async fn signup(
-    State(pool): State<MySqlPool>,
-    Json(req): Json<SignRequest>,
+    State(AppState { pool }): State<AppState>,
+    Json(SignRequest { email, password }): Json<SignRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let email = task::spawn_blocking(|| emval::validate_email(req.email))
+    let email = task::spawn_blocking(|| emval::validate_email(email))
         .await
         .expect("Unable to join email validation thread")
         .map_err(|e| {
@@ -85,7 +84,7 @@ pub async fn signup(
         .normalized;
 
     let hashed_password = Argon2::default()
-        .hash_password(req.password.as_bytes(), &SaltString::generate(&mut OsRng))
+        .hash_password(password.as_bytes(), &SaltString::generate(&mut OsRng))
         .map_err(|e| SignupError::PasswordHashError(e.to_string()))?
         .to_string();
 

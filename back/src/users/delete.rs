@@ -1,5 +1,5 @@
 use crate::{
-    ApiResult,
+    ApiResult, AppState,
     users::{UserDataError, UserRole, auth::validate},
 };
 use axum::{
@@ -7,7 +7,6 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use sqlx::MySqlPool;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(user))]
@@ -40,7 +39,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     )
 )]
 pub async fn user(
-    State(pool): State<MySqlPool>,
+    State(AppState { pool }): State<AppState>,
     role: UserRole,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {

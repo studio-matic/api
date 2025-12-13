@@ -1,11 +1,10 @@
 use crate::{
-    ApiResult,
+    ApiResult, AppState,
     supporters::{SupporterError, SupporterRequest},
     users::{UserRole, auth::validate},
 };
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Serialize;
-use sqlx::MySqlPool;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(supporter))]
@@ -37,9 +36,9 @@ struct SupporterIdResponse {
     )
 )]
 pub async fn supporter(
-    State(pool): State<MySqlPool>,
-    Json(req): Json<SupporterRequest>,
+    State(AppState { pool }): State<AppState>,
     role: UserRole,
+    Json(SupporterRequest { name, donation_id }): Json<SupporterRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
         Err(validate::ValidationError::InsufficientPermissions)?;
@@ -49,8 +48,8 @@ pub async fn supporter(
         "INSERT INTO supporters (name, donation_id)
         VALUES (?, ?)",
     )
-    .bind(req.name)
-    .bind(req.donation_id)
+    .bind(name)
+    .bind(donation_id)
     .execute(&pool)
     .await
     .map_err(SupporterError::DatabaseError)?

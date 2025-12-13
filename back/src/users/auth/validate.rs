@@ -1,4 +1,4 @@
-use crate::{ApiError, ApiResult, users::UserRole};
+use crate::{ApiError, ApiResult, AppState, users::UserRole};
 use axum::{
     Json,
     extract::{FromRequestParts, State},
@@ -60,7 +60,7 @@ impl IntoResponse for ValidationError {
     ),
 )]
 pub async fn validate(
-    State(pool): State<MySqlPool>,
+    State(AppState { pool }): State<AppState>,
     headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
     let token = extract_session_token(&headers)?;
@@ -99,12 +99,12 @@ pub async fn get_role(pool: &MySqlPool, headers: &HeaderMap) -> ApiResult<UserRo
     .ok_or(ValidationError::InvalidToken)?)
 }
 
-impl FromRequestParts<MySqlPool> for UserRole {
+impl FromRequestParts<AppState> for UserRole {
     type Rejection = ApiError;
 
     async fn from_request_parts(
         Parts { headers, .. }: &mut Parts,
-        pool: &MySqlPool,
+        AppState { pool }: &AppState,
     ) -> Result<Self, Self::Rejection> {
         get_role(pool, headers).await
     }

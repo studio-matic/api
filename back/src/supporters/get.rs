@@ -1,5 +1,5 @@
 use crate::{
-    ApiResult,
+    ApiResult, AppState,
     supporters::{SupporterError, SupporterResponse},
     users::{UserRole, auth::validate},
 };
@@ -9,7 +9,6 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use sqlx::MySqlPool;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(supporters, supporter))]
@@ -35,7 +34,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ),
 )]
 pub async fn supporters(
-    State(pool): State<MySqlPool>,
+    State(AppState { pool }): State<AppState>,
     role: UserRole,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
@@ -82,7 +81,7 @@ pub async fn supporters(
     ),
 )]
 pub async fn supporter(
-    State(pool): State<MySqlPool>,
+    State(AppState { pool }): State<AppState>,
     role: UserRole,
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {

@@ -1,11 +1,10 @@
 use crate::{
-    ApiResult,
+    ApiResult, AppState,
     donations::{DonationError, DonationRequest},
     users::{UserRole, auth::validate},
 };
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Serialize;
-use sqlx::MySqlPool;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(donation))]
@@ -37,8 +36,13 @@ struct DonationIdResponse {
     )
 )]
 pub async fn donation(
-    State(pool): State<MySqlPool>,
-    Json(req): Json<DonationRequest>,
+    State(AppState { pool }): State<AppState>,
+    role: UserRole,
+    Json(DonationRequest {
+        coins,
+        income_eur,
+        co_op,
+    }): Json<DonationRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
         Err(validate::ValidationError::InsufficientPermissions)?;
@@ -48,9 +52,9 @@ pub async fn donation(
         "INSERT INTO donations (coins, income_eur, co_op)
         VALUES (?, ?, ?)",
     )
-    .bind(req.coins)
-    .bind(req.income_eur)
-    .bind(req.co_op)
+    .bind(coins)
+    .bind(income_eur)
+    .bind(co_op)
     .execute(&pool)
     .await
     .map_err(DonationError::DatabaseError)?

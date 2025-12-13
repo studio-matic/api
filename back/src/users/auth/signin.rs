@@ -1,7 +1,6 @@
-use crate::ApiResult;
-
 use super::{SESSION_TOKEN_MAX_AGE, SignRequest, generate_session_token};
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
+use crate::{ApiResult, AppState};
 use axum::{
     Json,
     extract::State,
@@ -9,7 +8,6 @@ use axum::{
     response::{AppendHeaders, IntoResponse, Response},
 };
 use emval::ValidationError as EmailValidationError;
-use sqlx::MySqlPool;
 use tokio::task;
 
 #[derive(utoipa::OpenApi)]
@@ -77,10 +75,10 @@ impl IntoResponse for SigninError {
     ),
 )]
 pub async fn signin(
-    State(pool): State<MySqlPool>,
-    Json(req): Json<SignRequest>,
+    State(AppState { pool }): State<AppState>,
+    Json(SignRequest { email, password }): Json<SignRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let email = task::spawn_blocking(|| emval::validate_email(req.email))
+    let email = task::spawn_blocking(|| emval::validate_email(email))
         .await
         .expect("Unable to join email validation thread")
         .map_err(|e| {
@@ -100,7 +98,7 @@ pub async fn signin(
 
     if Argon2::default()
         .verify_password(
-            req.password.as_bytes(),
+            password.as_bytes(),
             &PasswordHash::new(&hashed_password)
                 .map_err(|e| SigninError::PasswordHashError(e.to_string()))?,
         )

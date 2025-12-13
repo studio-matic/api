@@ -1,10 +1,9 @@
-use crate::ApiResult;
+use crate::{ApiResult, AppState};
 use axum::{
     extract::State,
     http::{HeaderMap, StatusCode, header},
     response::{AppendHeaders, IntoResponse},
 };
-use sqlx::MySqlPool;
 
 use super::validate::{ValidationError, extract_session_token};
 
@@ -32,7 +31,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ),
 )]
 pub async fn signout(
-    State(pool): State<MySqlPool>,
+    State(AppState { pool }): State<AppState>,
     headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
     let token = extract_session_token(&headers)?;
