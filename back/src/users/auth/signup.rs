@@ -1,5 +1,7 @@
-use super::SignRequest;
-use crate::{ApiResult, AppState, users::UserRole};
+use crate::{
+    ApiResult, AppState,
+    users::{UserRole, email::EmailAddress},
+};
 use argon2::{
     Argon2,
     password_hash::{self, PasswordHasher, SaltString, rand_core::OsRng},
@@ -10,6 +12,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use serde::Deserialize;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(signup))]
@@ -19,8 +22,19 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ApiDoc::openapi()
 }
 
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct SignupRequest {
+    email: EmailAddress,
+    password: String,
+    invite: String,
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum SignupError {
+    #[error("Invalid invite")]
+    ExpiredInvite,
+    #[error("Invite not found")]
+    InviteNotFound,
     #[error("Account already exists")]
     Conflict,
     #[error("Could not hash password: {0}")]
@@ -32,6 +46,8 @@ pub enum SignupError {
 impl IntoResponse for SignupError {
     fn into_response(self) -> Response {
         let status = match self {
+            Self::InviteNotFound => StatusCode::NOT_FOUND,
+            Self::ExpiredInvite => StatusCode::GONE,
             Self::Conflict => StatusCode::CONFLICT,
             Self::PasswordHashError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -66,8 +82,35 @@ impl IntoResponse for SignupError {
 )]
 pub async fn signup(
     State(AppState { pool }): State<AppState>,
-    Json(SignRequest { email, password }): Json<SignRequest>,
+    Json(SignupRequest {
+        email,
+        password,
+        invite,
+    }): Json<SignupRequest>,
 ) -> ApiResult<impl IntoResponse> {
+    let mut transaction = pool.begin().await.map_err(SignupError::DatabaseError)?;
+
+    let (id, role): (u64, UserRole) =
+        sqlx::query_as("SELECT id, role FROM invites WHERE code = ? LIMIT 1")
+            .bind(&invite)
+            .fetch_optional(&pool)
+            .await
+            .map_err(SignupError::DatabaseError)?
+            .ok_or(SignupError::InviteNotFound)?;
+
+    if sqlx::query(
+        "UPDATE invites SET expires_at = NOW() WHERE id = ? AND expires_at > NOW() LIMIT 1",
+    )
+    .bind(id)
+    .execute(&mut *transaction)
+    .await
+    .map_err(SignupError::DatabaseError)?
+    .rows_affected()
+    .eq(&0)
+    {
+        Err(SignupError::ExpiredInvite)?
+    }
+
     let hashed_password = Argon2::default()
         .hash_password(password.as_bytes(), &SaltString::generate(&mut OsRng))
         .map_err(SignupError::PasswordHashError)?
@@ -76,14 +119,19 @@ pub async fn signup(
     match sqlx::query("INSERT INTO accounts (email, password, role) VALUES (?, ?, ?)")
         .bind(&email)
         .bind(&hashed_password)
-        .bind(UserRole::Editor)
-        .execute(&pool)
+        .bind(role)
+        .execute(&mut *transaction)
         .await
     {
-        Ok(_) => Ok(StatusCode::CREATED.into_response()),
-        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => {
-            Err(SignupError::Conflict.into())
+        Ok(_) => {
+            transaction
+                .commit()
+                .await
+                .map_err(SignupError::DatabaseError)?;
+
+            Ok(StatusCode::CREATED)
         }
-        Err(e) => Err(SignupError::DatabaseError(e).into()),
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Err(SignupError::Conflict)?,
+        Err(e) => Err(SignupError::DatabaseError(e))?,
     }
 }

@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::Type;
 use thiserror::Error;
 
@@ -51,7 +51,19 @@ struct UserDataResponse {
     role_rank: u8,
 }
 
-#[derive(Clone, Copy, Serialize, Type, PartialEq, Eq, PartialOrd, Ord, utoipa::ToSchema)]
+#[derive(
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    Type,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    utoipa::ToSchema,
+    Debug,
+)]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
 pub enum UserRole {

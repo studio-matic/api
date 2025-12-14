@@ -1,16 +1,8 @@
-use crate::users::email::EmailAddress;
 use rand::Rng;
-use serde::Deserialize;
 use sqlx::MySqlPool;
 use std::time::Duration;
 
 const SESSION_TOKEN_MAX_AGE: Duration = Duration::from_hours(1);
-
-#[derive(Deserialize, utoipa::ToSchema)]
-pub struct SignRequest {
-    email: EmailAddress,
-    password: String,
-}
 
 fn generate_session_token() -> String {
     rand::rng()
@@ -35,10 +27,12 @@ pub async fn cleanup_expired_sessions(pool: MySqlPool) -> ! {
     }
 }
 
+pub mod invite;
 pub mod signin;
 pub mod signout;
 pub mod signup;
 pub mod validate;
+pub use invite::invite;
 pub use signin::signin;
 pub use signout::signout;
 pub use signup::signup;

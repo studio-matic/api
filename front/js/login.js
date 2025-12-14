@@ -1,10 +1,11 @@
 async function signup() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
+    const invite = document.getElementById("invite").value;
     const res = await fetch(`${baseUrl}/users/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, invite }),
         credentials: "include"
     });
     if (res.ok) {
@@ -54,6 +55,7 @@ async function cookiesignin() {
 async function updateAuthUI() {
     const email = document.getElementById("email");
     const password = document.getElementById("password");
+    const invite = document.getElementById("invite");
     const signup = document.getElementById("signup");
     const signin = document.getElementById("signin");
     const signout = document.getElementById("signout");
@@ -65,12 +67,14 @@ async function updateAuthUI() {
     if (res.ok) {
         email.hidden = true;
         password.hidden = true;
+        invite.hidden = true;
         signup.hidden = true;
         signin.hidden = true;
         signout.hidden = false;
     } else {
         email.hidden = false;
         password.hidden = false;
+        invite.hidden = false;
         signup.hidden = false;
         signin.hidden = false;
         signout.hidden = true;

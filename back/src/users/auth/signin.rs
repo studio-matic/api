@@ -1,5 +1,10 @@
-use super::{SESSION_TOKEN_MAX_AGE, SignRequest, generate_session_token};
-use crate::{ApiResult, AppState};
+use crate::{
+    ApiResult, AppState,
+    users::{
+        auth::{SESSION_TOKEN_MAX_AGE, generate_session_token},
+        email::EmailAddress,
+    },
+};
 use argon2::{Argon2, PasswordHash, PasswordVerifier, password_hash};
 use axum::{
     Json,
@@ -7,6 +12,7 @@ use axum::{
     http::{StatusCode, header},
     response::{AppendHeaders, IntoResponse, Response},
 };
+use serde::Deserialize;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(signin))]
@@ -14,6 +20,12 @@ struct ApiDoc;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     use utoipa::OpenApi;
     ApiDoc::openapi()
+}
+
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct SigninRequest {
+    email: EmailAddress,
+    password: String,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -71,7 +83,7 @@ impl IntoResponse for SigninError {
 )]
 pub async fn signin(
     State(AppState { pool }): State<AppState>,
-    Json(SignRequest { email, password }): Json<SignRequest>,
+    Json(SigninRequest { email, password }): Json<SigninRequest>,
 ) -> ApiResult<impl IntoResponse> {
     let (id, hashed_password): (u64, String) =
         sqlx::query_as("SELECT id, password FROM accounts WHERE email = ? LIMIT 1")

@@ -21,6 +21,7 @@ struct ApiDoc;
 fn openapi() -> utoipa::openapi::OpenApi {
     use utoipa::OpenApi;
     let mut api = ApiDoc::openapi();
+    api.merge(users::auth::invite::openapi());
     api.merge(users::auth::signup::openapi());
     api.merge(users::auth::signin::openapi());
     api.merge(users::auth::signout::openapi());
@@ -52,6 +53,7 @@ async fn main() {
         .route("/users", routing::get(users::get::users))
         .route("/users/{id}", routing::get(users::get::user))
         .route("/users/{id}", routing::delete(users::delete::user))
+        .route("/users/auth/invite", routing::post(users::auth::invite))
         .route("/users/auth/signup", routing::post(users::auth::signup))
         .route("/users/auth/signin", routing::post(users::auth::signin))
         .route("/users/auth/signout", routing::post(users::auth::signout))
@@ -114,6 +116,8 @@ type ApiResult<T> = Result<T, ApiError>;
 pub enum ApiError {
     #[error("could not validate session: {0}")]
     Validation(#[from] users::auth::validate::ValidationError),
+    #[error("could not retreive invite: {0}")]
+    Invite(#[from] users::auth::invite::InviteError),
     #[error("could not sign in: {0}")]
     Signin(#[from] users::auth::signin::SigninError),
     #[error("could not sign up: {0}")]
@@ -130,6 +134,7 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         match self {
             ApiError::Validation(e) => e.into_response(),
+            ApiError::Invite(e) => e.into_response(),
             ApiError::Signin(e) => e.into_response(),
             ApiError::Signup(e) => e.into_response(),
             ApiError::UserData(e) => e.into_response(),
