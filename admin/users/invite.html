@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="../../css/admin.css" rel="stylesheet">
+
+    <meta charset="UTF-8">
+    <title>Users</title>
+</head>
+
+<body>
+    <div id="status">checking backend ⏳</div>
+    <script src="../../js/main.js"></script>
+    <script src="../../js/admin/users/invite.js"></script>
+    <script>redirLoggedOut()</script>
+    <script>redirUnauthorized()</script>
+
+    <h2>Welcome to the admin dashboard</h2>
+
+    <h3>Invite</h3>
+    <label for="cars">Choose a car:</label>
+    <select name="role" id="role">
+          <option value="None">None</option>
+          <option value="editor">Editor</option>
+          <option value="admin">Admin</option>
+    </select>
+    <button id="invite" onclick="invite()">Invite</button>
+    <p>Note that these codes will disappear on page reload</p>
+    <table id="invites" role="table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Role</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Data rows will be inserted here by JS -->
+        </tbody>
+    </table>
+</body>
+
+</html>
