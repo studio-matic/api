@@ -1,6 +1,6 @@
 use crate::{
     ApiResult, AppState,
-    donations::{DonationError, DonationRequest},
+    donations::{self, DonationRequest},
     users::{UserRole, auth::validate},
 };
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
@@ -45,7 +45,7 @@ pub async fn donation(
     }): Json<DonationRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
     let id = sqlx::query(
@@ -57,7 +57,7 @@ pub async fn donation(
     .bind(co_op)
     .execute(&pool)
     .await
-    .map_err(DonationError::DatabaseError)?
+    .map_err(donations::Error::Database)?
     .last_insert_id();
 
     Ok((StatusCode::CREATED, Json(DonationIdResponse { id })))

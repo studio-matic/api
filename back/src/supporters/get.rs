@@ -1,12 +1,11 @@
 use crate::{
     ApiResult, AppState,
-    supporters::{SupporterError, SupporterResponse},
+    supporters::{self, SupporterResponse},
     users::{UserRole, auth::validate},
 };
 use axum::{
     Json,
     extract::{Path, State},
-    http::StatusCode,
     response::IntoResponse,
 };
 
@@ -38,27 +37,27 @@ pub async fn supporters(
     role: UserRole,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
     let supporters: Vec<(u64, String, u64)> =
         sqlx::query_as("SELECT id, name, donation_id FROM supporters")
             .fetch_all(&pool)
             .await
-            .map_err(SupporterError::DatabaseError)?;
+            .map_err(supporters::Error::Database)?;
 
-    let supporters = supporters
-        .into_iter()
-        .map(|(a, b, c)| {
-            Ok(SupporterResponse {
-                id: a,
-                name: b,
-                donation_id: c,
+    Ok(Json(
+        supporters
+            .into_iter()
+            .map(|(a, b, c)| {
+                Ok(SupporterResponse {
+                    id: a,
+                    name: b,
+                    donation_id: c,
+                })
             })
-        })
-        .collect::<ApiResult<Vec<_>>>()?;
-
-    Ok((StatusCode::OK, Json(supporters)))
+            .collect::<ApiResult<Vec<_>>>()?,
+    ))
 }
 
 #[utoipa::path(
@@ -86,25 +85,21 @@ pub async fn supporter(
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
-    let supporter: (u64, String, u64) = sqlx::query_as(
+    let (id, name, donation_id): (u64, String, u64) = sqlx::query_as(
         "SELECT id, name, donation_id FROM supporters WHERE supporters.id = ? LIMIT 1",
     )
     .bind(id)
     .fetch_optional(&pool)
     .await
-    .map_err(SupporterError::DatabaseError)?
-    .ok_or(SupporterError::NotFound)?;
+    .map_err(supporters::Error::Database)?
+    .ok_or(supporters::Error::NotFound)?;
 
-    let (id, name, donation_id) = supporter;
-
-    let supporter = SupporterResponse {
+    Ok(Json(SupporterResponse {
         id,
         name,
         donation_id,
-    };
-
-    Ok((StatusCode::OK, Json(supporter)))
+    }))
 }

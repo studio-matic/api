@@ -9,7 +9,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 }
 
 #[utoipa::path(
-    get,
+    head,
     path = "/health",
     responses(
         (status = StatusCode::OK, description = "Backend is healthy"),

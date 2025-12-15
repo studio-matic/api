@@ -4,7 +4,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 #[derive(utoipa::OpenApi)]
 struct ApiDoc;
@@ -18,22 +17,22 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     api
 }
 
-#[derive(Error, Debug)]
-pub enum DonationError {
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
     #[error("Donation not found")]
     NotFound,
     #[error("Could not format")]
-    FormatError(#[from] time::error::Format),
+    Format(#[from] time::error::Format),
     #[error("Could not query database")]
-    DatabaseError(#[from] sqlx::Error),
+    Database(#[from] sqlx::Error),
 }
 
-impl IntoResponse for DonationError {
+impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let status = match self {
             Self::NotFound => StatusCode::NOT_FOUND,
-            Self::FormatError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Format(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         let msg = self.to_string();

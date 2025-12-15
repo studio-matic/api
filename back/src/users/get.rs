@@ -1,6 +1,6 @@
 use crate::{
     ApiResult, AppState,
-    users::{UserDataError, UserDataResponse, UserRole, auth::validate},
+    users::{self, UserDataResponse, UserRole, auth::validate},
 };
 use axum::{
     Json,
@@ -41,26 +41,23 @@ pub async fn users(
     role: UserRole,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Admin {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
-    let users: Vec<(u64, String, UserRole)> =
-        sqlx::query_as("SELECT id, email, role FROM accounts")
+    Ok(Json(
+        sqlx::query_as::<_, (u64, String, UserRole)>("SELECT id, email, role FROM accounts")
             .fetch_all(&pool)
             .await
-            .map_err(UserDataError::DatabaseError)?;
-
-    let users = users
-        .into_iter()
-        .map(|(id, email, role)| UserDataResponse {
-            id,
-            email,
-            role,
-            role_rank: u8::from(role),
-        })
-        .collect::<Vec<_>>();
-
-    Ok((StatusCode::OK, Json(users)))
+            .map_err(users::Error::DatabaseError)?
+            .into_iter()
+            .map(|(id, email, role)| UserDataResponse {
+                id,
+                email,
+                role,
+                role_rank: u8::from(role),
+            })
+            .collect::<Vec<_>>(),
+    ))
 }
 
 #[utoipa::path(
@@ -92,7 +89,7 @@ pub async fn user(
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Admin {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
     let user: (u64, String, UserRole) =
@@ -100,8 +97,8 @@ pub async fn user(
             .bind(id)
             .fetch_optional(&pool)
             .await
-            .map_err(UserDataError::DatabaseError)?
-            .ok_or(UserDataError::NotFound)?;
+            .map_err(users::Error::DatabaseError)?
+            .ok_or(users::Error::NotFound)?;
 
     let (id, email, role) = user;
 

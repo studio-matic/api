@@ -1,6 +1,6 @@
 use crate::{
     ApiResult, AppState,
-    supporters::{SupporterError, SupporterRequest},
+    supporters::{self, SupporterRequest},
     users::{UserRole, auth::validate},
 };
 use axum::{
@@ -44,26 +44,20 @@ pub async fn supporter(
     Json(SupporterRequest { name, donation_id }): Json<SupporterRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
-    let res = sqlx::query(
-        "UPDATE supporters 
-            SET 
-                name = ?,
-                donation_id = ?
-        WHERE id = ?",
+    Ok(
+        sqlx::query("UPDATE supporters  SET  name = ?, donation_id = ? WHERE id = ?")
+            .bind(name)
+            .bind(donation_id)
+            .bind(id)
+            .execute(&pool)
+            .await
+            .map_err(supporters::Error::Database)?
+            .rows_affected()
+            .ne(&0)
+            .then_some(StatusCode::OK)
+            .ok_or(supporters::Error::NotFound)?,
     )
-    .bind(name)
-    .bind(donation_id)
-    .bind(id)
-    .execute(&pool)
-    .await
-    .map_err(SupporterError::DatabaseError)?;
-
-    if res.rows_affected() == 0 {
-        Err(SupporterError::NotFound.into())
-    } else {
-        Ok(StatusCode::OK)
-    }
 }

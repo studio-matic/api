@@ -23,14 +23,14 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 }
 
 #[derive(Error, Debug)]
-pub enum UserDataError {
+pub enum Error {
     #[error("Account not found")]
     NotFound,
     #[error("Could not query database")]
     DatabaseError(#[from] sqlx::Error),
 }
 
-impl IntoResponse for UserDataError {
+impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let status = match self {
             Self::NotFound => StatusCode::NOT_FOUND,

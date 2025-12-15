@@ -30,7 +30,7 @@ pub struct SignupRequest {
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum SignupError {
+pub enum Error {
     #[error("Invalid invite")]
     ExpiredInvite,
     #[error("Invite not found")]
@@ -38,19 +38,19 @@ pub enum SignupError {
     #[error("Account already exists")]
     Conflict,
     #[error("Could not hash password: {0}")]
-    PasswordHashError(#[from] password_hash::Error),
+    PasswordHash(#[from] password_hash::Error),
     #[error("Could not query database")]
-    DatabaseError(#[from] sqlx::Error),
+    Database(#[from] sqlx::Error),
 }
 
-impl IntoResponse for SignupError {
+impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let status = match self {
             Self::InviteNotFound => StatusCode::NOT_FOUND,
             Self::ExpiredInvite => StatusCode::GONE,
             Self::Conflict => StatusCode::CONFLICT,
-            Self::PasswordHashError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::PasswordHash(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         let msg = self.to_string();
@@ -88,15 +88,15 @@ pub async fn signup(
         invite,
     }): Json<SignupRequest>,
 ) -> ApiResult<impl IntoResponse> {
-    let mut transaction = pool.begin().await.map_err(SignupError::DatabaseError)?;
+    let mut transaction = pool.begin().await.map_err(Error::Database)?;
 
     let (id, role): (u64, UserRole) =
         sqlx::query_as("SELECT id, role FROM invites WHERE code = ? LIMIT 1")
             .bind(&invite)
             .fetch_optional(&pool)
             .await
-            .map_err(SignupError::DatabaseError)?
-            .ok_or(SignupError::InviteNotFound)?;
+            .map_err(Error::Database)?
+            .ok_or(Error::InviteNotFound)?;
 
     if sqlx::query(
         "UPDATE invites SET expires_at = NOW() WHERE id = ? AND expires_at > NOW() LIMIT 1",
@@ -104,34 +104,31 @@ pub async fn signup(
     .bind(id)
     .execute(&mut *transaction)
     .await
-    .map_err(SignupError::DatabaseError)?
+    .map_err(Error::Database)?
     .rows_affected()
     .eq(&0)
     {
-        Err(SignupError::ExpiredInvite)?
+        Err(Error::ExpiredInvite)?
     }
-
-    let hashed_password = Argon2::default()
-        .hash_password(password.as_bytes(), &SaltString::generate(&mut OsRng))
-        .map_err(SignupError::PasswordHashError)?
-        .to_string();
 
     match sqlx::query("INSERT INTO accounts (email, password, role) VALUES (?, ?, ?)")
         .bind(&email)
-        .bind(&hashed_password)
+        .bind(
+            Argon2::default()
+                .hash_password(password.as_bytes(), &SaltString::generate(&mut OsRng))
+                .map_err(Error::PasswordHash)?
+                .to_string(),
+        )
         .bind(role)
         .execute(&mut *transaction)
         .await
     {
         Ok(_) => {
-            transaction
-                .commit()
-                .await
-                .map_err(SignupError::DatabaseError)?;
+            transaction.commit().await.map_err(Error::Database)?;
 
             Ok(StatusCode::CREATED)
         }
-        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Err(SignupError::Conflict)?,
-        Err(e) => Err(SignupError::DatabaseError(e))?,
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Err(Error::Conflict)?,
+        Err(e) => Err(Error::Database(e))?,
     }
 }

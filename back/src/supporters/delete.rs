@@ -1,6 +1,5 @@
 use crate::{
-    ApiResult, AppState,
-    supporters::SupporterError,
+    ApiResult, AppState, supporters,
     users::{UserRole, auth::validate},
 };
 use axum::{
@@ -41,18 +40,16 @@ pub async fn supporter(
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
-    let res = sqlx::query("DELETE FROM supporters WHERE id = ?")
+    Ok(sqlx::query("DELETE FROM supporters WHERE id = ? LIMIT 1")
         .bind(id)
         .execute(&pool)
         .await
-        .map_err(SupporterError::DatabaseError)?;
-
-    if res.rows_affected() == 0 {
-        Err(SupporterError::NotFound.into())
-    } else {
-        Ok(StatusCode::NO_CONTENT)
-    }
+        .map_err(supporters::Error::Database)?
+        .rows_affected()
+        .ne(&0)
+        .then_some(StatusCode::NO_CONTENT)
+        .ok_or(supporters::Error::NotFound)?)
 }

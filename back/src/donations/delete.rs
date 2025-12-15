@@ -1,6 +1,5 @@
 use crate::{
-    ApiResult, AppState,
-    donations::DonationError,
+    ApiResult, AppState, donations,
     users::{UserRole, auth::validate},
 };
 use axum::{
@@ -41,18 +40,16 @@ pub async fn donation(
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
-    let res = sqlx::query("DELETE FROM donations WHERE id = ?")
+    Ok(sqlx::query("DELETE FROM donations WHERE id = ? LIMIT 1")
         .bind(id)
         .execute(&pool)
         .await
-        .map_err(DonationError::DatabaseError)?;
-
-    if res.rows_affected() == 0 {
-        Err(DonationError::NotFound.into())
-    } else {
-        Ok(StatusCode::NO_CONTENT)
-    }
+        .map_err(donations::Error::Database)?
+        .rows_affected()
+        .ne(&0)
+        .then_some(StatusCode::NO_CONTENT)
+        .ok_or(donations::Error::NotFound)?)
 }

@@ -1,6 +1,6 @@
 use crate::{
     ApiResult, AppState,
-    users::{UserDataError, UserRole, auth::validate},
+    users::{self, UserRole, auth::validate},
 };
 use axum::{
     extract::{Path, State},
@@ -44,26 +44,26 @@ pub async fn user(
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Admin {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
     let _ = sqlx::query("SELECT 1 FROM accounts WHERE id = ? LIMIT 1")
         .bind(id)
         .fetch_optional(&pool)
         .await
-        .map_err(UserDataError::DatabaseError)?
-        .ok_or(UserDataError::NotFound)?;
+        .map_err(users::Error::DatabaseError)?
+        .ok_or(users::Error::NotFound)?;
 
     Ok(
-        sqlx::query("DELETE FROM accounts WHERE id = ? AND role < ?")
+        sqlx::query("DELETE FROM accounts WHERE id = ? AND role < ? LIMIT 1")
             .bind(id)
             .bind(u8::from(role))
             .execute(&pool)
             .await
-            .map_err(UserDataError::DatabaseError)?
+            .map_err(users::Error::DatabaseError)?
             .rows_affected()
             .ne(&0)
             .then_some(StatusCode::NO_CONTENT)
-            .ok_or(validate::ValidationError::InsufficientPermissions)?,
+            .ok_or(validate::Error::InsufficientPermissions)?,
     )
 }

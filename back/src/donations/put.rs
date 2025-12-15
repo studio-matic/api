@@ -1,6 +1,6 @@
 use crate::{
     ApiResult, AppState,
-    donations::{DonationError, DonationRequest},
+    donations::{self, DonationRequest},
     users::{UserRole, auth::validate},
 };
 use axum::{
@@ -47,28 +47,21 @@ pub async fn donation(
     }): Json<DonationRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
-    let res = sqlx::query(
-        "UPDATE donations
-            SET
-                coins = ?,
-                income_eur = ?,
-                co_op =?
-        WHERE id = ?",
+    Ok(
+        sqlx::query("UPDATE donations SET coins = ?, income_eur = ?, co_op = ? WHERE id = ?")
+            .bind(coins)
+            .bind(income_eur)
+            .bind(co_op)
+            .bind(id)
+            .execute(&pool)
+            .await
+            .map_err(donations::Error::Database)?
+            .rows_affected()
+            .ne(&0)
+            .then_some(StatusCode::OK)
+            .ok_or(donations::Error::NotFound)?,
     )
-    .bind(coins)
-    .bind(income_eur)
-    .bind(co_op)
-    .bind(id)
-    .execute(&pool)
-    .await
-    .map_err(DonationError::DatabaseError)?;
-
-    if res.rows_affected() == 0 {
-        Err(DonationError::NotFound.into())
-    } else {
-        Ok(StatusCode::OK)
-    }
 }

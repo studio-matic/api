@@ -49,14 +49,14 @@ async fn main() {
 
     let app = Router::new()
         .merge(SwaggerUi::new("/").url("/api-docs/openapi.json", openapi()))
-        .route("/health", routing::get(health::health))
+        .route("/health", routing::head(health::health))
         .route("/users", routing::get(users::get::users))
         .route("/users/{id}", routing::get(users::get::user))
         .route("/users/{id}", routing::delete(users::delete::user))
         .route("/users/auth/invite", routing::post(users::auth::invite))
         .route("/users/auth/signup", routing::post(users::auth::signup))
         .route("/users/auth/signin", routing::post(users::auth::signin))
-        .route("/users/auth/signout", routing::post(users::auth::signout))
+        .route("/users/auth/signout", routing::delete(users::auth::signout))
         .route("/users/auth/validate", routing::get(users::auth::validate))
         .route("/users/me", routing::get(users::me::me))
         .route("/donations", routing::get(donations::get::donations))
@@ -90,7 +90,13 @@ async fn main() {
                     #[allow(unreachable_code)]
                     AllowOrigin::predicate(move |_: &http::HeaderValue, _: &Parts| true)
                 })
-                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+                .allow_methods([
+                    Method::GET,
+                    Method::HEAD,
+                    Method::POST,
+                    Method::PUT,
+                    Method::DELETE,
+                ])
                 .allow_headers([
                     header::CONTENT_TYPE,
                     header::ACCEPT,
@@ -115,19 +121,19 @@ type ApiResult<T> = Result<T, ApiError>;
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error("could not validate session: {0}")]
-    Validation(#[from] users::auth::validate::ValidationError),
+    Validation(#[from] users::auth::validate::Error),
     #[error("could not retreive invite: {0}")]
-    Invite(#[from] users::auth::invite::InviteError),
+    Invite(#[from] users::auth::invite::Error),
     #[error("could not sign in: {0}")]
-    Signin(#[from] users::auth::signin::SigninError),
+    Signin(#[from] users::auth::signin::Error),
     #[error("could not sign up: {0}")]
-    Signup(#[from] users::auth::signup::SignupError),
+    Signup(#[from] users::auth::signup::Error),
     #[error("could not retreive user data: {0}")]
-    UserData(#[from] users::UserDataError),
+    UserData(#[from] users::Error),
     #[error("could not get donations: {0}")]
-    Donation(#[from] donations::DonationError),
+    Donation(#[from] donations::Error),
     #[error("could not get supporters: {0}")]
-    Supporter(#[from] supporters::SupporterError),
+    Supporter(#[from] supporters::Error),
 }
 
 impl IntoResponse for ApiError {

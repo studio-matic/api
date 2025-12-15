@@ -29,27 +29,24 @@ pub struct SigninRequest {
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum SigninError {
+pub enum Error {
     #[error("Password incorrect")]
     IncorrectPassword,
     #[error("Account not found")]
     AccountNotFound,
-    #[error("Could not save session token: {0}")]
-    SessionError(String),
     #[error("Could not hash password: {0}")]
-    PasswordHashError(#[from] password_hash::Error),
+    PasswordHash(#[from] password_hash::Error),
     #[error("Could not query database")]
-    DatabaseError(#[from] sqlx::Error),
+    Database(#[from] sqlx::Error),
 }
 
-impl IntoResponse for SigninError {
+impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let status = match self {
             Self::IncorrectPassword => StatusCode::UNAUTHORIZED,
             Self::AccountNotFound => StatusCode::NOT_FOUND,
-            Self::SessionError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::PasswordHashError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::PasswordHash(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
         let msg = self.to_string();
@@ -90,52 +87,42 @@ pub async fn signin(
             .bind(&email)
             .fetch_optional(&pool)
             .await
-            .map_err(SigninError::DatabaseError)?
-            .ok_or(SigninError::AccountNotFound)?;
+            .map_err(Error::Database)?
+            .ok_or(Error::AccountNotFound)?;
 
-    if Argon2::default()
+    Argon2::default()
         .verify_password(
             password.as_bytes(),
-            &PasswordHash::new(&hashed_password).map_err(SigninError::PasswordHashError)?,
+            &PasswordHash::new(&hashed_password).map_err(Error::PasswordHash)?,
         )
-        .is_ok()
-    {
-        let token = generate_session_token();
+        .map_err(|e| match e {
+            password_hash::Error::Password => Error::IncorrectPassword,
+            e => Error::PasswordHash(e),
+        })?;
 
-        let _ = sqlx::query(
-            "INSERT INTO sessions (token, account_id, expires_at)
-                VALUES (
-                    ?,
-                    ?,
-                    NOW() + INTERVAL ? SECOND
-                )",
+    let token = generate_session_token();
+
+    let _ = sqlx::query(
+            "INSERT INTO sessions (token, account_id, expires_at) VALUES (?, ?, NOW() + INTERVAL ? SECOND)",
         )
         .bind(&token)
         .bind(id)
         .bind(SESSION_TOKEN_MAX_AGE.as_secs())
         .execute(&pool)
         .await
-        .map_err(|e| SigninError::SessionError(e.to_string()))?;
+        .map_err(Error::Database)?;
 
-        Ok((
-            StatusCode::OK,
-            AppendHeaders([(
-                header::SET_COOKIE,
-                #[cfg(debug_assertions)]
-                format!(
-                    "session_token={token}; Max-Age={}; Path=/; HttpOnly",
-                    SESSION_TOKEN_MAX_AGE.as_secs()
-                ),
-                #[cfg(not(debug_assertions))]
-                format!(
-                    "session_token={token}; Max-Age={}; Path=/; HttpOnly; Secure; SameSite=None",
-                    SESSION_TOKEN_MAX_AGE.as_secs()
-                ),
-            )]),
-            Json("Successful signin"),
-        )
-            .into_response())
-    } else {
-        Err(SigninError::IncorrectPassword.into())
-    }
+    Ok(AppendHeaders([(
+        header::SET_COOKIE,
+        #[cfg(debug_assertions)]
+        format!(
+            "session_token={token}; Max-Age={}; Path=/; HttpOnly",
+            SESSION_TOKEN_MAX_AGE.as_secs()
+        ),
+        #[cfg(not(debug_assertions))]
+        format!(
+            "session_token={token}; Max-Age={}; Path=/; HttpOnly; Secure; SameSite=None",
+            SESSION_TOKEN_MAX_AGE.as_secs()
+        ),
+    )]))
 }

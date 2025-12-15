@@ -1,13 +1,8 @@
 use crate::{
     ApiResult, AppState,
-    users::{UserDataError, UserDataResponse, UserRole, auth::validate},
+    users::{self, UserDataResponse, UserRole, auth::validate},
 };
-use axum::{
-    Json,
-    extract::State,
-    http::{HeaderMap, StatusCode},
-    response::IntoResponse,
-};
+use axum::{Json, extract::State, http::HeaderMap, response::IntoResponse};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(me))]
@@ -39,27 +34,19 @@ pub async fn me(
 ) -> ApiResult<impl IntoResponse> {
     let token = validate::extract_session_token(&headers)?;
 
-    let user: (u64, String, UserRole) = sqlx::query_as(
-        "SELECT accounts.id, accounts.email, accounts.role
-            FROM sessions
-            JOIN accounts ON accounts.id = sessions.account_id
-            WHERE sessions.token = ?
-            LIMIT 1",
+    let (id, email, role): (u64, String, UserRole) = sqlx::query_as(
+        "SELECT accounts.id, accounts.email, accounts.role FROM sessions JOIN accounts ON accounts.id = sessions.account_id WHERE sessions.token = ? LIMIT 1",
     )
     .bind(token)
     .fetch_one(&pool)
     .await
-    .map_err(UserDataError::DatabaseError)?;
+    .map_err(users::Error::DatabaseError)?;
 
-    let (id, email, role) = user;
-
-    let user = UserDataResponse {
+    Ok(Json(UserDataResponse {
         id,
         email,
         role,
 
         role_rank: u8::from(role),
-    };
-
-    Ok((StatusCode::OK, Json(user)))
+    }))
 }

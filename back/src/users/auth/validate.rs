@@ -6,7 +6,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use sqlx::MySqlPool;
-use thiserror::Error;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(validate))]
@@ -16,8 +15,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ApiDoc::openapi()
 }
 
-#[derive(Error, Debug)]
-pub enum ValidationError {
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
     #[error("Cookies not found")]
     NoCookies,
     #[error("session_token cookie not found")]
@@ -27,13 +26,13 @@ pub enum ValidationError {
     #[error("Insufficient permissions")]
     InsufficientPermissions,
     #[error("Could not query database")]
-    DatabaseError(#[from] sqlx::Error),
+    Database(#[from] sqlx::Error),
 }
 
-impl IntoResponse for ValidationError {
+impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let status = match self {
-            Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::InsufficientPermissions => StatusCode::FORBIDDEN,
             _ => StatusCode::UNAUTHORIZED,
         };
@@ -63,24 +62,19 @@ pub async fn validate(
     State(AppState { pool }): State<AppState>,
     headers: HeaderMap,
 ) -> ApiResult<impl IntoResponse> {
-    let token = extract_session_token(&headers)?;
-
-    if sqlx::query(
+    sqlx::query(
         "SELECT 1
             FROM sessions
             WHERE token = ?
             LIMIT 1",
     )
-    .bind(token)
+    .bind(extract_session_token(&headers)?)
     .fetch_optional(&pool)
     .await
-    .map_err(ValidationError::DatabaseError)?
+    .map_err(Error::Database)?
     .is_some()
-    {
-        Ok(StatusCode::OK.into_response())
-    } else {
-        Err(ValidationError::InvalidToken.into())
-    }
+    .then_some(Ok(StatusCode::OK))
+    .ok_or(Error::InvalidToken)?
 }
 
 pub async fn get_role(pool: &MySqlPool, headers: &HeaderMap) -> ApiResult<UserRole> {
@@ -95,8 +89,8 @@ pub async fn get_role(pool: &MySqlPool, headers: &HeaderMap) -> ApiResult<UserRo
     .bind(token)
     .fetch_optional(pool)
     .await
-    .map_err(ValidationError::DatabaseError)?
-    .ok_or(ValidationError::InvalidToken)?)
+    .map_err(Error::Database)?
+    .ok_or(Error::InvalidToken)?)
 }
 
 impl FromRequestParts<AppState> for UserRole {
@@ -111,13 +105,11 @@ impl FromRequestParts<AppState> for UserRole {
 }
 
 pub fn extract_session_token(headers: &HeaderMap) -> ApiResult<String> {
-    let cookie_header = headers
-        .get(header::COOKIE)
-        .ok_or(ValidationError::NoCookies)?;
+    let cookie_header = headers.get(header::COOKIE).ok_or(Error::NoCookies)?;
     let cookies = cookie_header.to_str().unwrap_or_default();
     let session_token = cookies
         .split(';')
         .find_map(|s| s.trim().strip_prefix("session_token="))
-        .ok_or(ValidationError::NoSessionToken)?;
+        .ok_or(Error::NoSessionToken)?;
     Ok(session_token.to_owned())
 }

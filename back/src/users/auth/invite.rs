@@ -30,14 +30,14 @@ pub struct InviteRequest {
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum InviteError {
+pub enum Error {
     #[error("Invite already exists")]
     Conflict,
     #[error("Could not query database")]
     DatabaseError(#[from] sqlx::Error),
 }
 
-impl IntoResponse for InviteError {
+impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let status = match self {
             Self::Conflict => StatusCode::CONFLICT,
@@ -70,7 +70,7 @@ pub async fn invite(
     Json(InviteRequest { role }): Json<InviteRequest>,
 ) -> ApiResult<impl IntoResponse> {
     if requester < UserRole::SuperAdmin || role >= UserRole::SuperAdmin {
-        Err(validate::ValidationError::InsufficientPermissions)?
+        Err(validate::Error::InsufficientPermissions)?
     }
 
     let code: String = rand::rng()
@@ -87,8 +87,8 @@ pub async fn invite(
     .execute(&pool)
     .await
     {
-        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Err(InviteError::Conflict)?,
-        Err(e) => Err(InviteError::DatabaseError(e))?,
+        Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Err(Error::Conflict)?,
+        Err(e) => Err(Error::DatabaseError(e))?,
         Ok(_) => Ok((StatusCode::CREATED, Json(InviteResponse { code }))),
     }
 }

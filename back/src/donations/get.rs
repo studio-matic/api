@@ -1,12 +1,11 @@
 use crate::{
     ApiResult, AppState,
-    donations::{DonationError, DonationResponse},
+    donations::{self, DonationResponse},
     users::{UserRole, auth::validate},
 };
 use axum::{
     Json,
     extract::{Path, State},
-    http::StatusCode,
     response::IntoResponse,
 };
 use time::OffsetDateTime;
@@ -38,16 +37,16 @@ pub async fn donations(
     role: UserRole,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
-    let donations: Vec<(u64, u64, OffsetDateTime, f64, String)> =
-        sqlx::query_as("SELECT id, coins, donated_at, income_eur, co_op FROM donations")
-            .fetch_all(&pool)
-            .await
-            .map_err(DonationError::DatabaseError)?;
-
-    let donations = donations
+    Ok(Json(
+        sqlx::query_as::<_, (u64, u64, OffsetDateTime, f64, String)>(
+            "SELECT id, coins, donated_at, income_eur, co_op FROM donations",
+        )
+        .fetch_all(&pool)
+        .await
+        .map_err(donations::Error::Database)?
         .into_iter()
         .map(|(a, b, c, d, e)| {
             Ok(DonationResponse {
@@ -56,14 +55,13 @@ pub async fn donations(
                 donated_at: c
                     .to_utc()
                     .format(&time::format_description::well_known::Rfc3339)
-                    .map_err(DonationError::FormatError)?,
+                    .map_err(donations::Error::Format)?,
                 income_eur: d,
                 co_op: e,
             })
         })
-        .collect::<ApiResult<Vec<_>>>()?;
-
-    Ok((StatusCode::OK, Json(donations)))
+        .collect::<ApiResult<Vec<_>>>()?,
+    ))
 }
 
 #[utoipa::path(
@@ -91,30 +89,27 @@ pub async fn donation(
     Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
-        Err(validate::ValidationError::InsufficientPermissions)?;
+        Err(validate::Error::InsufficientPermissions)?
     }
 
-    let donation: (u64, u64, OffsetDateTime, f64, String) = sqlx::query_as(
-        "SELECT id, coins, donated_at, income_eur, co_op FROM donations WHERE id = ? LIMIT 1",
-    )
-    .bind(id)
-    .fetch_optional(&pool)
-    .await
-    .map_err(DonationError::DatabaseError)?
-    .ok_or(DonationError::NotFound)?;
+    let (id, coins, donated_at, income_eur, co_op): (u64, u64, OffsetDateTime, f64, String) =
+        sqlx::query_as(
+            "SELECT id, coins, donated_at, income_eur, co_op FROM donations WHERE id = ? LIMIT 1",
+        )
+        .bind(id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(donations::Error::Database)?
+        .ok_or(donations::Error::NotFound)?;
 
-    let (id, coins, donated_at, income_eur, co_op) = donation;
-
-    let donations = DonationResponse {
+    Ok(Json(DonationResponse {
         id,
         coins,
         donated_at: donated_at
             .to_utc()
             .format(&time::format_description::well_known::Rfc3339)
-            .map_err(DonationError::FormatError)?,
+            .map_err(donations::Error::Format)?,
         income_eur,
         co_op,
-    };
-
-    Ok((StatusCode::OK, Json(donations)))
+    }))
 }
