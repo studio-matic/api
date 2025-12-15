@@ -120,7 +120,7 @@ async function enableForms() {
         const id = document.getElementById("donation-id").value;
         const coins = parseInt(document.getElementById("donation-coins").value, 10);
         const income_eur = parseFloat(document.getElementById("donation-income").value);
-        const co_op = "STUDIO-MATIC";
+        const co_op = "STUDIO_MATIC";
         const statusEl = document.getElementById("add-donation-status");
 
         try {
@@ -209,7 +209,7 @@ async function enableForms() {
                     body: JSON.stringify({
                         coins: 0,
                         income_eur,
-                        co_op: "STUDIO-MATIC"
+                        co_op: "STUDIO_MATIC"
                     })
                 });
 

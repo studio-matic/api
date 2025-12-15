@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
+use sqlx::Type;
 
 #[derive(utoipa::OpenApi)]
 struct ApiDoc;
@@ -54,7 +55,15 @@ struct DonationResponse {
 pub struct DonationRequest {
     coins: u64,
     income_eur: f64,
-    co_op: String, // TODO: validate to be either "S4L" or "STUDIO-MATIC"
+    co_op: CoOp,
+}
+
+#[derive(Deserialize, Type, utoipa::ToSchema)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[sqlx(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum CoOp {
+    S4l,
+    StudioMatic,
 }
 
 pub mod delete;
