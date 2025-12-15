@@ -35,7 +35,7 @@ async function signin() {
 
 async function signout() {
     const res = await fetch(`${baseUrl}/users/auth/signout`, {
-        method: "POST",
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
         credentials: "include"
     });

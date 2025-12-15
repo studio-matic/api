@@ -23,7 +23,7 @@ async function checkBackend() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     try {
-        const r = await fetch(`${baseUrl}/health`, { method: "GET", signal: controller.signal });
+        const r = await fetch(`${baseUrl}/health`, { method: "HEAD", signal: controller.signal });
         clearTimeout(timeoutId);
         el.innerText = r.ok ? "backend online ✅" : "backend offline ❌";
     } catch (_) {
