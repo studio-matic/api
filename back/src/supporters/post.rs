@@ -1,7 +1,7 @@
 use crate::{
     ApiError, ApiResult, AppState,
-    supporters::{self, SupporterRequest},
-    users::{UserRole, auth::validate},
+    supporters::{self, Request},
+    users::{Role, auth::validate},
 };
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::WithRejection as Rejectable;
@@ -16,7 +16,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
-struct SupporterIdResponse {
+#[schema(as = supporters::IdResponse)]
+struct IdResponse {
     id: u64,
 }
 
@@ -26,7 +27,7 @@ struct SupporterIdResponse {
     responses(
         (
             status = StatusCode::CREATED,
-            body = SupporterIdResponse,
+            body = IdResponse,
             description = "Successfully added supporter",
         ),
         (
@@ -38,13 +39,10 @@ struct SupporterIdResponse {
 )]
 pub async fn supporter(
     State(AppState { pool }): State<AppState>,
-    role: UserRole,
-    Rejectable(Json(SupporterRequest { name, donation_id }), _): Rejectable<
-        Json<SupporterRequest>,
-        ApiError,
-    >,
+    role: Role,
+    Rejectable(Json(Request { name, donation_id }), _): Rejectable<Json<Request>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
-    if role < UserRole::Editor {
+    if role < Role::Editor {
         Err(validate::Error::InsufficientPermissions)?
     }
 
@@ -59,5 +57,5 @@ pub async fn supporter(
     .map_err(supporters::Error::Database)?
     .last_insert_id();
 
-    Ok((StatusCode::CREATED, Json(SupporterIdResponse { id })))
+    Ok((StatusCode::CREATED, Json(IdResponse { id })))
 }

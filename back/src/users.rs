@@ -2,7 +2,7 @@ use crate::ErrorResponse;
 use axum::{
     Json,
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{self, IntoResponse},
 };
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
@@ -33,7 +33,7 @@ pub enum Error {
 }
 
 impl IntoResponse for Error {
-    fn into_response(self) -> Response {
+    fn into_response(self) -> response::Response {
         let status = match self {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -47,10 +47,11 @@ impl IntoResponse for Error {
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
-struct UserDataResponse {
+#[schema(as = users::Response)]
+struct Response {
     id: u64,
     email: String,
-    role: UserRole,
+    role: Role,
     role_rank: u8,
 }
 
@@ -69,7 +70,7 @@ struct UserDataResponse {
 )]
 #[serde(rename_all = "lowercase")]
 #[sqlx(rename_all = "lowercase")]
-pub enum UserRole {
+pub enum Role {
     None,
     Editor,
     Admin,
@@ -77,13 +78,13 @@ pub enum UserRole {
 }
 
 // HACK: to implement hierarchical `>` and `<` for `WHERE` clauses
-impl From<UserRole> for u8 {
-    fn from(role: UserRole) -> Self {
+impl From<Role> for u8 {
+    fn from(role: Role) -> Self {
         match role {
-            UserRole::None => 1,
-            UserRole::Editor => 2,
-            UserRole::Admin => 3,
-            UserRole::SuperAdmin => 4,
+            Role::None => 1,
+            Role::Editor => 2,
+            Role::Admin => 3,
+            Role::SuperAdmin => 4,
         }
     }
 }

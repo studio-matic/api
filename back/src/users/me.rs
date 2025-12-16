@@ -1,6 +1,6 @@
 use crate::{
     ApiResult, AppState,
-    users::{self, UserDataResponse, UserRole, auth::validate},
+    users::{self, Response, Role, auth::validate},
 };
 use axum::{Json, extract::State, http::HeaderMap, response::IntoResponse};
 
@@ -18,7 +18,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     responses(
         (
             status = StatusCode::OK,
-            body = UserDataResponse
+            body = Response
         ),
         (
             status = StatusCode::UNAUTHORIZED,
@@ -30,11 +30,11 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 pub async fn me(
     State(AppState { pool }): State<AppState>,
     headers: HeaderMap,
-    _: UserRole,
+    _: Role,
 ) -> ApiResult<impl IntoResponse> {
     let token = validate::extract_session_token(&headers)?;
 
-    let (id, email, role): (u64, String, UserRole) = sqlx::query_as(
+    let (id, email, role): (u64, String, Role) = sqlx::query_as(
         "SELECT accounts.id, accounts.email, accounts.role FROM sessions JOIN accounts ON accounts.id = sessions.account_id WHERE sessions.token = ? LIMIT 1",
     )
     .bind(token)
@@ -42,7 +42,7 @@ pub async fn me(
     .await
     .map_err(users::Error::DatabaseError)?;
 
-    Ok(Json(UserDataResponse {
+    Ok(Json(Response {
         id,
         email,
         role,

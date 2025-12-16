@@ -1,6 +1,6 @@
 use crate::{
     ApiError, ApiResult, AppState,
-    users::{self, UserDataResponse, UserRole, auth::validate},
+    users::{self, Response, Role, auth::validate},
 };
 use axum::{
     Json,
@@ -24,7 +24,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     responses(
         (
             status = StatusCode::OK,
-            body = Vec<UserDataResponse>,
+            body = Vec<Response>,
         ),
         (
             status = StatusCode::UNAUTHORIZED,
@@ -39,19 +39,19 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 )]
 pub async fn users(
     State(AppState { pool }): State<AppState>,
-    role: UserRole,
+    role: Role,
 ) -> ApiResult<impl IntoResponse> {
-    if role < UserRole::Admin {
+    if role < Role::Admin {
         Err(validate::Error::InsufficientPermissions)?
     }
 
     Ok(Json(
-        sqlx::query_as::<_, (u64, String, UserRole)>("SELECT id, email, role FROM accounts")
+        sqlx::query_as::<_, (u64, String, Role)>("SELECT id, email, role FROM accounts")
             .fetch_all(&pool)
             .await
             .map_err(users::Error::Database)?
             .into_iter()
-            .map(|(id, email, role)| UserDataResponse {
+            .map(|(id, email, role)| Response {
                 id,
                 email,
                 role,
@@ -67,7 +67,7 @@ pub async fn users(
     responses(
         (
             status = StatusCode::OK,
-            body = UserDataResponse,
+            body = Response,
         ),
         (
             status = StatusCode::NOT_FOUND,
@@ -87,13 +87,13 @@ pub async fn users(
 pub async fn user(
     State(AppState { pool }): State<AppState>,
     Rejectable(Path(id), _): Rejectable<Path<u64>, ApiError>,
-    role: UserRole,
+    role: Role,
 ) -> ApiResult<impl IntoResponse> {
-    if role < UserRole::Admin {
+    if role < Role::Admin {
         Err(validate::Error::InsufficientPermissions)?
     }
 
-    let user: (u64, String, UserRole) =
+    let user: (u64, String, Role) =
         sqlx::query_as("SELECT id, email, role FROM accounts WHERE id = ? LIMIT 1")
             .bind(id)
             .fetch_optional(&pool)
@@ -103,7 +103,7 @@ pub async fn user(
 
     let (id, email, role) = user;
 
-    let user = UserDataResponse {
+    let user = Response {
         id,
         email,
         role,

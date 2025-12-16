@@ -1,10 +1,10 @@
+use crate::ErrorResponse;
 use axum::{
     Json,
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{self, IntoResponse},
 };
 use serde::{Deserialize, Serialize};
-use crate::ErrorResponse;
 
 #[derive(utoipa::OpenApi)]
 struct ApiDoc;
@@ -29,7 +29,7 @@ pub enum Error {
 }
 
 impl IntoResponse for Error {
-    fn into_response(self) -> Response {
+    fn into_response(self) -> response::Response {
         let status = match self {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -43,14 +43,16 @@ impl IntoResponse for Error {
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
-struct SupporterResponse {
+#[schema(as = supporters::Response)]
+struct Response {
     id: u64,
     name: String,
     donation_id: u64,
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
-pub struct SupporterRequest {
+#[schema(as = supporters::Request)]
+pub struct Request {
     name: String,
     donation_id: u64,
 }

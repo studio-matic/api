@@ -1,12 +1,12 @@
 use crate::{
     ApiError, ApiResult, AppState, ErrorResponse,
-    users::{UserRole, auth::validate},
+    users::{Role, auth::validate},
 };
 use axum::{
     Json,
     extract::State,
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{self, IntoResponse},
 };
 use axum_extra::extract::WithRejection as Rejectable;
 use rand::Rng;
@@ -21,13 +21,15 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
-struct InviteResponse {
+#[schema(as = invite::Response)]
+struct Response {
     code: String,
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
-pub struct InviteRequest {
-    role: UserRole,
+#[schema(as = invite::Request)]
+pub struct Request {
+    role: Role,
 }
 
 #[derive(Debug, thiserror::Error, strum::AsRefStr, strum::VariantNames)]
@@ -41,7 +43,7 @@ pub enum Error {
 }
 
 impl IntoResponse for Error {
-    fn into_response(self) -> Response {
+    fn into_response(self) -> response::Response {
         let status = match self {
             Self::Conflict => StatusCode::CONFLICT,
             Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -61,7 +63,7 @@ impl IntoResponse for Error {
         (
             status = StatusCode::CREATED,
             description = "Successfully generated invite",
-            body = InviteResponse,
+            body = Response,
         ),
         (
             status = StatusCode::INTERNAL_SERVER_ERROR,
@@ -70,10 +72,10 @@ impl IntoResponse for Error {
 )]
 pub async fn invite(
     State(AppState { pool }): State<AppState>,
-    requester: UserRole,
-    Rejectable(Json(InviteRequest { role }), _): Rejectable<Json<InviteRequest>, ApiError>,
+    requester: Role,
+    Rejectable(Json(Request { role }), _): Rejectable<Json<Request>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
-    if requester < UserRole::SuperAdmin || role >= UserRole::SuperAdmin {
+    if requester < Role::SuperAdmin || role >= Role::SuperAdmin {
         Err(validate::Error::InsufficientPermissions)?
     }
 
@@ -93,6 +95,6 @@ pub async fn invite(
     {
         Err(sqlx::Error::Database(e)) if e.is_unique_violation() => Err(Error::Conflict)?,
         Err(e) => Err(Error::DatabaseError(e))?,
-        Ok(_) => Ok((StatusCode::CREATED, Json(InviteResponse { code }))),
+        Ok(_) => Ok((StatusCode::CREATED, Json(Response { code }))),
     }
 }

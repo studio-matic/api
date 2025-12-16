@@ -1,7 +1,7 @@
 use crate::{
     ApiError, ApiResult, AppState,
-    donations::{self, DonationRequest},
-    users::{UserRole, auth::validate},
+    donations::{self, Request},
+    users::{Role, auth::validate},
 };
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::WithRejection as Rejectable;
@@ -16,7 +16,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
-struct DonationIdResponse {
+#[schema(as = donations::IdResponse)]
+struct IdResponse {
     id: u64,
 }
 
@@ -26,7 +27,7 @@ struct DonationIdResponse {
     responses(
         (
             status = StatusCode::CREATED,
-            body = DonationIdResponse,
+            body = IdResponse,
             description = "Successfully added donation",
         ),
         (
@@ -38,17 +39,17 @@ struct DonationIdResponse {
 )]
 pub async fn donation(
     State(AppState { pool }): State<AppState>,
-    role: UserRole,
+    role: Role,
     Rejectable(
-        Json(DonationRequest {
+        Json(Request {
             coins,
             income_eur,
             co_op,
         }),
         _,
-    ): Rejectable<Json<DonationRequest>, ApiError>,
+    ): Rejectable<Json<Request>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
-    if role < UserRole::Editor {
+    if role < Role::Editor {
         Err(validate::Error::InsufficientPermissions)?
     }
 
@@ -64,5 +65,5 @@ pub async fn donation(
     .map_err(donations::Error::Database)?
     .last_insert_id();
 
-    Ok((StatusCode::CREATED, Json(DonationIdResponse { id })))
+    Ok((StatusCode::CREATED, Json(IdResponse { id })))
 }
