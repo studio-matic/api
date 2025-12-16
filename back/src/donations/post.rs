@@ -1,9 +1,10 @@
 use crate::{
-    ApiResult, AppState,
+    ApiError, ApiResult, AppState,
     donations::{self, DonationRequest},
     users::{UserRole, auth::validate},
 };
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum_extra::extract::WithRejection as Rejectable;
 use serde::Serialize;
 
 #[derive(utoipa::OpenApi)]
@@ -38,11 +39,14 @@ struct DonationIdResponse {
 pub async fn donation(
     State(AppState { pool }): State<AppState>,
     role: UserRole,
-    Json(DonationRequest {
-        coins,
-        income_eur,
-        co_op,
-    }): Json<DonationRequest>,
+    Rejectable(
+        Json(DonationRequest {
+            coins,
+            income_eur,
+            co_op,
+        }),
+        _,
+    ): Rejectable<Json<DonationRequest>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
         Err(validate::Error::InsufficientPermissions)?

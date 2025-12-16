@@ -1,9 +1,10 @@
 use crate::{
-    ApiResult, AppState,
+    ApiError, ApiResult, AppState,
     supporters::{self, SupporterRequest},
     users::{UserRole, auth::validate},
 };
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum_extra::extract::WithRejection as Rejectable;
 use serde::Serialize;
 
 #[derive(utoipa::OpenApi)]
@@ -38,7 +39,10 @@ struct SupporterIdResponse {
 pub async fn supporter(
     State(AppState { pool }): State<AppState>,
     role: UserRole,
-    Json(SupporterRequest { name, donation_id }): Json<SupporterRequest>,
+    Rejectable(Json(SupporterRequest { name, donation_id }), _): Rejectable<
+        Json<SupporterRequest>,
+        ApiError,
+    >,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
         Err(validate::Error::InsufficientPermissions)?

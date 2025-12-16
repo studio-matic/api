@@ -1,16 +1,17 @@
 mod donations;
 mod supporters;
 use axum::{
-    Router,
+    Json, Router,
+    extract::rejection,
     http::{self, HeaderValue, Method, header, request::Parts},
     response::{IntoResponse, Response},
     routing,
 };
 mod health;
 mod users;
+use serde::Serialize;
 use sqlx::MySqlPool;
 use std::{env, net::SocketAddr};
-use thiserror::Error;
 use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfig};
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -116,24 +117,35 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
+#[derive(Debug, Serialize)]
+pub struct ErrorResponse {
+    error: String,
+    message: String,
+}
+
 type ApiResult<T> = Result<T, ApiError>;
 
-#[derive(Error, Debug)]
+#[derive(Debug, thiserror::Error, strum::AsRefStr, strum::VariantNames)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
 pub enum ApiError {
-    #[error("could not validate session: {0}")]
+    #[error("Could not validate session: {0}")]
     Validation(#[from] users::auth::validate::Error),
-    #[error("could not retreive invite: {0}")]
+    #[error("Could not retreive invite: {0}")]
     Invite(#[from] users::auth::invite::Error),
-    #[error("could not sign in: {0}")]
+    #[error("Could not sign in: {0}")]
     Signin(#[from] users::auth::signin::Error),
-    #[error("could not sign up: {0}")]
+    #[error("Could not sign up: {0}")]
     Signup(#[from] users::auth::signup::Error),
-    #[error("could not retreive user data: {0}")]
+    #[error("Could not retreive user data: {0}")]
     UserData(#[from] users::Error),
-    #[error("could not get donations: {0}")]
+    #[error("Could not get donations: {0}")]
     Donation(#[from] donations::Error),
-    #[error("could not get supporters: {0}")]
+    #[error("Could not get supporters: {0}")]
     Supporter(#[from] supporters::Error),
+    #[error("Could not deserialize json: {0}")]
+    Json(#[from] rejection::JsonRejection),
+    #[error("Could not match path: {0}")]
+    Path(#[from] rejection::PathRejection),
 }
 
 impl IntoResponse for ApiError {
@@ -146,6 +158,16 @@ impl IntoResponse for ApiError {
             ApiError::UserData(e) => e.into_response(),
             ApiError::Donation(e) => e.into_response(),
             ApiError::Supporter(e) => e.into_response(),
+            ApiError::Json(ref e) => {
+                let error = self.as_ref().to_string();
+                let message = self.to_string();
+                (e.status(), Json(ErrorResponse { error, message })).into_response()
+            }
+            ApiError::Path(ref e) => {
+                let error = self.as_ref().to_string();
+                let message = self.to_string();
+                (e.status(), Json(ErrorResponse { error, message })).into_response()
+            }
         }
     }
 }

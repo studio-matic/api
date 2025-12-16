@@ -1,5 +1,5 @@
 use crate::{
-    ApiResult, AppState,
+    ApiError, ApiResult, AppState,
     supporters::{self, SupporterResponse},
     users::{UserRole, auth::validate},
 };
@@ -8,6 +8,7 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
 };
+use axum_extra::extract::WithRejection as Rejectable;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(supporters, supporter))]
@@ -82,7 +83,7 @@ pub async fn supporters(
 pub async fn supporter(
     State(AppState { pool }): State<AppState>,
     role: UserRole,
-    Path(id): Path<u64>,
+    Rejectable(Path(id), _): Rejectable<Path<u64>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
         Err(validate::Error::InsufficientPermissions)?
