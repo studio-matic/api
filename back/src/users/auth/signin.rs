@@ -1,5 +1,5 @@
 use crate::{
-    ApiResult, AppState,
+    ApiError, ApiResult, AppState, ErrorResponse,
     users::{
         auth::{SESSION_TOKEN_MAX_AGE, generate_session_token},
         email::EmailAddress,
@@ -12,6 +12,7 @@ use axum::{
     http::{StatusCode, header},
     response::{AppendHeaders, IntoResponse, Response},
 };
+use axum_extra::extract::WithRejection as Rejectable;
 use serde::Deserialize;
 
 #[derive(utoipa::OpenApi)]
@@ -28,13 +29,15 @@ pub struct SigninRequest {
     password: String,
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, thiserror::Error, strum::AsRefStr, strum::VariantNames)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
+#[strum(prefix = "SIGNIN_")]
 pub enum Error {
     #[error("Password incorrect")]
     IncorrectPassword,
     #[error("Account not found")]
     AccountNotFound,
-    #[error("Could not hash password: {0}")]
+    #[error("Could not hash password")]
     PasswordHash(#[from] password_hash::Error),
     #[error("Could not query database")]
     Database(#[from] sqlx::Error),
@@ -49,9 +52,10 @@ impl IntoResponse for Error {
             Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
-        let msg = self.to_string();
+        let error = self.as_ref().to_string();
+        let message = self.to_string();
 
-        (status, Json(msg)).into_response()
+        (status, Json(ErrorResponse { error, message })).into_response()
     }
 }
 
@@ -80,7 +84,10 @@ impl IntoResponse for Error {
 )]
 pub async fn signin(
     State(AppState { pool }): State<AppState>,
-    Json(SigninRequest { email, password }): Json<SigninRequest>,
+    Rejectable(Json(SigninRequest { email, password }), _): Rejectable<
+        Json<SigninRequest>,
+        ApiError,
+    >,
 ) -> ApiResult<impl IntoResponse> {
     let (id, hashed_password): (u64, String) =
         sqlx::query_as("SELECT id, password FROM accounts WHERE email = ? LIMIT 1")

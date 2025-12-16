@@ -1,5 +1,5 @@
 use crate::{
-    ApiResult, AppState,
+    ApiError, ApiResult, AppState,
     donations::{self, DonationResponse},
     users::{UserRole, auth::validate},
 };
@@ -8,6 +8,7 @@ use axum::{
     extract::{Path, State},
     response::IntoResponse,
 };
+use axum_extra::extract::WithRejection as Rejectable;
 use time::OffsetDateTime;
 
 #[derive(utoipa::OpenApi)]
@@ -55,7 +56,7 @@ pub async fn donations(
                 donated_at: c
                     .to_utc()
                     .format(&time::format_description::well_known::Rfc3339)
-                    .map_err(donations::Error::Format)?,
+                    .map_err(donations::Error::TimeFormat)?,
                 income_eur: d,
                 co_op: e,
             })
@@ -86,7 +87,7 @@ pub async fn donations(
 pub async fn donation(
     State(AppState { pool }): State<AppState>,
     role: UserRole,
-    Path(id): Path<u64>,
+    Rejectable(Path(id), _): Rejectable<Path<u64>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Editor {
         Err(validate::Error::InsufficientPermissions)?
@@ -108,7 +109,7 @@ pub async fn donation(
         donated_at: donated_at
             .to_utc()
             .format(&time::format_description::well_known::Rfc3339)
-            .map_err(donations::Error::Format)?,
+            .map_err(donations::Error::TimeFormat)?,
         income_eur,
         co_op,
     }))

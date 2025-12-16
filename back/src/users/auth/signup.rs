@@ -1,5 +1,5 @@
 use crate::{
-    ApiResult, AppState,
+    ApiError, ApiResult, AppState, ErrorResponse,
     users::{UserRole, email::EmailAddress},
 };
 use argon2::{
@@ -12,6 +12,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use axum_extra::extract::WithRejection as Rejectable;
 use serde::Deserialize;
 
 #[derive(utoipa::OpenApi)]
@@ -29,7 +30,9 @@ pub struct SignupRequest {
     invite: String,
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, thiserror::Error, strum::AsRefStr, strum::VariantNames)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
+#[strum(prefix = "SIGNUP_")]
 pub enum Error {
     #[error("Invalid invite")]
     ExpiredInvite,
@@ -37,7 +40,7 @@ pub enum Error {
     InviteNotFound,
     #[error("Account already exists")]
     Conflict,
-    #[error("Could not hash password: {0}")]
+    #[error("Could not hash password")]
     PasswordHash(#[from] password_hash::Error),
     #[error("Could not query database")]
     Database(#[from] sqlx::Error),
@@ -53,9 +56,10 @@ impl IntoResponse for Error {
             Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
-        let msg = self.to_string();
+        let error = self.as_ref().to_string();
+        let message = self.to_string();
 
-        (status, Json(msg)).into_response()
+        (status, Json(ErrorResponse { error, message })).into_response()
     }
 }
 
@@ -82,11 +86,14 @@ impl IntoResponse for Error {
 )]
 pub async fn signup(
     State(AppState { pool }): State<AppState>,
-    Json(SignupRequest {
-        email,
-        password,
-        invite,
-    }): Json<SignupRequest>,
+    Rejectable(
+        Json(SignupRequest {
+            email,
+            password,
+            invite,
+        }),
+        _,
+    ): Rejectable<Json<SignupRequest>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
     let mut transaction = pool.begin().await.map_err(Error::Database)?;
 

@@ -1,4 +1,4 @@
-use crate::{ApiError, ApiResult, AppState, users::UserRole};
+use crate::{ApiError, ApiResult, AppState, ErrorResponse, users::UserRole};
 use axum::{
     Json,
     extract::{FromRequestParts, State},
@@ -15,7 +15,9 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ApiDoc::openapi()
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, thiserror::Error, strum::AsRefStr, strum::VariantNames)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
+#[strum(prefix = "VALIDATE_")]
 pub enum Error {
     #[error("Cookies not found")]
     NoCookies,
@@ -37,9 +39,10 @@ impl IntoResponse for Error {
             _ => StatusCode::UNAUTHORIZED,
         };
 
-        let msg = self.to_string();
+        let error = self.as_ref().to_string();
+        let message = self.to_string();
 
-        (status, Json(msg)).into_response()
+        (status, Json(ErrorResponse { error, message })).into_response()
     }
 }
 

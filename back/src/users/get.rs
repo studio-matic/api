@@ -1,5 +1,5 @@
 use crate::{
-    ApiResult, AppState,
+    ApiError, ApiResult, AppState,
     users::{self, UserDataResponse, UserRole, auth::validate},
 };
 use axum::{
@@ -8,6 +8,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
+use axum_extra::extract::WithRejection as Rejectable;
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(users, user))]
@@ -48,7 +49,7 @@ pub async fn users(
         sqlx::query_as::<_, (u64, String, UserRole)>("SELECT id, email, role FROM accounts")
             .fetch_all(&pool)
             .await
-            .map_err(users::Error::DatabaseError)?
+            .map_err(users::Error::Database)?
             .into_iter()
             .map(|(id, email, role)| UserDataResponse {
                 id,
@@ -85,8 +86,8 @@ pub async fn users(
 )]
 pub async fn user(
     State(AppState { pool }): State<AppState>,
+    Rejectable(Path(id), _): Rejectable<Path<u64>, ApiError>,
     role: UserRole,
-    Path(id): Path<u64>,
 ) -> ApiResult<impl IntoResponse> {
     if role < UserRole::Admin {
         Err(validate::Error::InsufficientPermissions)?
@@ -97,7 +98,7 @@ pub async fn user(
             .bind(id)
             .fetch_optional(&pool)
             .await
-            .map_err(users::Error::DatabaseError)?
+            .map_err(users::Error::Database)?
             .ok_or(users::Error::NotFound)?;
 
     let (id, email, role) = user;

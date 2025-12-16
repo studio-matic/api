@@ -1,5 +1,5 @@
 use crate::{
-    ApiResult, AppState,
+    ApiError, ApiResult, AppState, ErrorResponse,
     users::{UserRole, auth::validate},
 };
 use axum::{
@@ -8,6 +8,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use axum_extra::extract::WithRejection as Rejectable;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +30,9 @@ pub struct InviteRequest {
     role: UserRole,
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(Debug, thiserror::Error, strum::AsRefStr, strum::VariantNames)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
+#[strum(prefix = "INVITE_")]
 pub enum Error {
     #[error("Invite already exists")]
     Conflict,
@@ -44,9 +47,10 @@ impl IntoResponse for Error {
             Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
-        let msg = self.to_string();
+        let error = self.as_ref().to_string();
+        let message = self.to_string();
 
-        (status, Json(msg)).into_response()
+        (status, Json(ErrorResponse { error, message })).into_response()
     }
 }
 
@@ -67,7 +71,7 @@ impl IntoResponse for Error {
 pub async fn invite(
     State(AppState { pool }): State<AppState>,
     requester: UserRole,
-    Json(InviteRequest { role }): Json<InviteRequest>,
+    Rejectable(Json(InviteRequest { role }), _): Rejectable<Json<InviteRequest>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
     if requester < UserRole::SuperAdmin || role >= UserRole::SuperAdmin {
         Err(validate::Error::InsufficientPermissions)?

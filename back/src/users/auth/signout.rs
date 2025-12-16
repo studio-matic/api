@@ -7,6 +7,7 @@ use axum::{
     http::{HeaderMap, header},
     response::{AppendHeaders, IntoResponse},
 };
+
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(signout))]
 struct ApiDoc;

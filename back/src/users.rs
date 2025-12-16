@@ -1,3 +1,4 @@
+use crate::ErrorResponse;
 use axum::{
     Json,
     http::StatusCode,
@@ -5,7 +6,6 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
-use thiserror::Error;
 
 pub mod email;
 
@@ -22,24 +22,27 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     api
 }
 
-#[derive(Error, Debug)]
+#[derive(Debug, thiserror::Error, strum::AsRefStr, strum::VariantNames)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
+#[strum(prefix = "USERS_")]
 pub enum Error {
     #[error("Account not found")]
     NotFound,
     #[error("Could not query database")]
-    DatabaseError(#[from] sqlx::Error),
+    Database(#[from] sqlx::Error),
 }
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let status = match self {
             Self::NotFound => StatusCode::NOT_FOUND,
-            Self::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
-        let msg = self.to_string();
+        let error = self.as_ref().to_string();
+        let message = self.to_string();
 
-        (status, Json(msg)).into_response()
+        (status, Json(ErrorResponse { error, message })).into_response()
     }
 }
 
