@@ -1,6 +1,6 @@
 use crate::{
     ApiError, ApiResult, AppState, ErrorResponse,
-    users::{UserRole, email::EmailAddress},
+    users::{Role, email::EmailAddress},
 };
 use argon2::{
     Argon2,
@@ -24,7 +24,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
-pub struct SignupRequest {
+#[schema(as = signup::Request)]
+pub struct Request {
     email: EmailAddress,
     password: String,
     invite: String,
@@ -87,17 +88,17 @@ impl IntoResponse for Error {
 pub async fn signup(
     State(AppState { pool }): State<AppState>,
     Rejectable(
-        Json(SignupRequest {
+        Json(Request {
             email,
             password,
             invite,
         }),
         _,
-    ): Rejectable<Json<SignupRequest>, ApiError>,
+    ): Rejectable<Json<Request>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
     let mut transaction = pool.begin().await.map_err(Error::Database)?;
 
-    let (id, role): (u64, UserRole) =
+    let (id, role): (u64, Role) =
         sqlx::query_as("SELECT id, role FROM invites WHERE code = ? LIMIT 1")
             .bind(&invite)
             .fetch_optional(&pool)

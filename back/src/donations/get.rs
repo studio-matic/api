@@ -1,7 +1,7 @@
 use crate::{
     ApiError, ApiResult, AppState,
-    donations::{self, DonationResponse},
-    users::{UserRole, auth::validate},
+    donations::{self, Response},
+    users::{Role, auth::validate},
 };
 use axum::{
     Json,
@@ -24,7 +24,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     responses(
         (
             status = StatusCode::OK,
-            body = Vec<DonationResponse>,
+            body = Vec<Response>,
         ),
         (
             status = StatusCode::UNAUTHORIZED,
@@ -35,9 +35,9 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 )]
 pub async fn donations(
     State(AppState { pool }): State<AppState>,
-    role: UserRole,
+    role: Role,
 ) -> ApiResult<impl IntoResponse> {
-    if role < UserRole::Editor {
+    if role < Role::Editor {
         Err(validate::Error::InsufficientPermissions)?
     }
 
@@ -50,7 +50,7 @@ pub async fn donations(
         .map_err(donations::Error::Database)?
         .into_iter()
         .map(|(a, b, c, d, e)| {
-            Ok(DonationResponse {
+            Ok(Response {
                 id: a,
                 coins: b,
                 donated_at: c
@@ -71,7 +71,7 @@ pub async fn donations(
     responses(
         (
             status = StatusCode::OK,
-            body = DonationResponse,
+            body = Response,
         ),
         (
             status = StatusCode::NOT_FOUND,
@@ -86,10 +86,10 @@ pub async fn donations(
 )]
 pub async fn donation(
     State(AppState { pool }): State<AppState>,
-    role: UserRole,
+    role: Role,
     Rejectable(Path(id), _): Rejectable<Path<u64>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
-    if role < UserRole::Editor {
+    if role < Role::Editor {
         Err(validate::Error::InsufficientPermissions)?
     }
 
@@ -103,7 +103,7 @@ pub async fn donation(
         .map_err(donations::Error::Database)?
         .ok_or(donations::Error::NotFound)?;
 
-    Ok(Json(DonationResponse {
+    Ok(Json(Response {
         id,
         coins,
         donated_at: donated_at

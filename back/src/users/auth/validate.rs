@@ -1,4 +1,4 @@
-use crate::{ApiError, ApiResult, AppState, ErrorResponse, users::UserRole};
+use crate::{ApiError, ApiResult, AppState, ErrorResponse, users::Role};
 use axum::{
     Json,
     extract::{FromRequestParts, State},
@@ -80,10 +80,10 @@ pub async fn validate(
     .ok_or(Error::InvalidToken)?
 }
 
-pub async fn get_role(pool: &MySqlPool, headers: &HeaderMap) -> ApiResult<UserRole> {
+pub async fn get_role(pool: &MySqlPool, headers: &HeaderMap) -> ApiResult<Role> {
     let token = extract_session_token(headers)?;
 
-    Ok(sqlx::query_scalar::<_, UserRole>(
+    Ok(sqlx::query_scalar::<_, Role>(
         "SELECT accounts.role
                     FROM sessions JOIN accounts ON sessions.account_id = accounts.id
                         WHERE sessions.token = ?
@@ -96,7 +96,7 @@ pub async fn get_role(pool: &MySqlPool, headers: &HeaderMap) -> ApiResult<UserRo
     .ok_or(Error::InvalidToken)?)
 }
 
-impl FromRequestParts<AppState> for UserRole {
+impl FromRequestParts<AppState> for Role {
     type Rejection = ApiError;
 
     async fn from_request_parts(

@@ -24,7 +24,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
-pub struct SigninRequest {
+#[schema(as = signin::Request)]
+pub struct Request {
     email: EmailAddress,
     password: String,
 }
@@ -84,10 +85,7 @@ impl IntoResponse for Error {
 )]
 pub async fn signin(
     State(AppState { pool }): State<AppState>,
-    Rejectable(Json(SigninRequest { email, password }), _): Rejectable<
-        Json<SigninRequest>,
-        ApiError,
-    >,
+    Rejectable(Json(Request { email, password }), _): Rejectable<Json<Request>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
     let (id, hashed_password): (u64, String) =
         sqlx::query_as("SELECT id, password FROM accounts WHERE email = ? LIMIT 1")

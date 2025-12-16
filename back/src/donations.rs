@@ -2,7 +2,7 @@ use crate::ErrorResponse;
 use axum::{
     Json,
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::{self, IntoResponse},
 };
 use serde::{Deserialize, Serialize};
 use sqlx::Type;
@@ -32,7 +32,7 @@ pub enum Error {
 }
 
 impl IntoResponse for Error {
-    fn into_response(self) -> Response {
+    fn into_response(self) -> response::Response {
         let status = match self {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::TimeFormat(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -47,7 +47,8 @@ impl IntoResponse for Error {
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
-struct DonationResponse {
+#[schema(as = donations::Response)]
+struct Response {
     id: u64,
     coins: u64,
     donated_at: String,
@@ -56,7 +57,8 @@ struct DonationResponse {
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
-pub struct DonationRequest {
+#[schema(as = donations::Request)]
+pub struct Request {
     coins: u64,
     income_eur: f64,
     co_op: CoOp,

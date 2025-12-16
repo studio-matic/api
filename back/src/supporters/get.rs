@@ -1,7 +1,7 @@
 use crate::{
     ApiError, ApiResult, AppState,
-    supporters::{self, SupporterResponse},
-    users::{UserRole, auth::validate},
+    supporters::{self, Response},
+    users::{Role, auth::validate},
 };
 use axum::{
     Json,
@@ -24,7 +24,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     responses(
         (
             status = StatusCode::OK,
-            body = Vec<SupporterResponse>,
+            body = Vec<Response>,
         ),
         (
             status = StatusCode::UNAUTHORIZED,
@@ -35,9 +35,9 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 )]
 pub async fn supporters(
     State(AppState { pool }): State<AppState>,
-    role: UserRole,
+    role: Role,
 ) -> ApiResult<impl IntoResponse> {
-    if role < UserRole::Editor {
+    if role < Role::Editor {
         Err(validate::Error::InsufficientPermissions)?
     }
 
@@ -51,7 +51,7 @@ pub async fn supporters(
         supporters
             .into_iter()
             .map(|(a, b, c)| {
-                Ok(SupporterResponse {
+                Ok(Response {
                     id: a,
                     name: b,
                     donation_id: c,
@@ -67,7 +67,7 @@ pub async fn supporters(
     responses(
         (
             status = StatusCode::OK,
-            body = SupporterResponse,
+            body = Response,
         ),
         (
             status = StatusCode::NOT_FOUND,
@@ -82,10 +82,10 @@ pub async fn supporters(
 )]
 pub async fn supporter(
     State(AppState { pool }): State<AppState>,
-    role: UserRole,
+    role: Role,
     Rejectable(Path(id), _): Rejectable<Path<u64>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
-    if role < UserRole::Editor {
+    if role < Role::Editor {
         Err(validate::Error::InsufficientPermissions)?
     }
 
@@ -98,7 +98,7 @@ pub async fn supporter(
     .map_err(supporters::Error::Database)?
     .ok_or(supporters::Error::NotFound)?;
 
-    Ok(Json(SupporterResponse {
+    Ok(Json(Response {
         id,
         name,
         donation_id,

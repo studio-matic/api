@@ -1,7 +1,7 @@
 use crate::{
     ApiError, ApiResult, AppState,
-    donations::{self, DonationRequest},
-    users::{UserRole, auth::validate},
+    donations::{self, Request},
+    users::{Role, auth::validate},
 };
 use axum::{
     Json,
@@ -39,18 +39,18 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 )]
 pub async fn donation(
     State(AppState { pool }): State<AppState>,
-    role: UserRole,
+    role: Role,
     Rejectable(Path(id), _): Rejectable<Path<u64>, ApiError>,
     Rejectable(
-        Json(DonationRequest {
+        Json(Request {
             coins,
             income_eur,
             co_op,
         }),
         _,
-    ): Rejectable<Json<DonationRequest>, ApiError>,
+    ): Rejectable<Json<Request>, ApiError>,
 ) -> ApiResult<impl IntoResponse> {
-    if role < UserRole::Editor {
+    if role < Role::Editor {
         Err(validate::Error::InsufficientPermissions)?
     }
 
