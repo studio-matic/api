@@ -1,47 +1,150 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Studiomatic - Login</title>
+        <link rel="icon" type="image/x-icon" href="images/logo.png" />
 
-<head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-    <style>
-        body {
-            font-family: system-ui, sans-serif;
-            max-width: 480px;
-            margin: 120px auto;
-        }
+        <link rel="stylesheet" href="css/style.css" />
+        <link
+            rel="stylesheet"
+            href="assets/fontawesome-free-7.1.0-web/css/all.min.css"
+        />
+    </head>
 
-        input {
-            width: 100%;
-            padding: 12px;
-            font-size: 18px;
-        }
+    <body>
+        <main class="content">
+            <div class="testo_principale">
+                <div class="input_utente">
+                    <h2>Inserisci le tue credenziali:</h2>
+                    <input type="email" id="email" placeholder="email" />
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder="password"
+                    />
+                    <input
+                        type="invite"
+                        id="invite"
+                        placeholder="invite (signup only)"
+                    />
+                </div>
+                <button class="bottone" id="signup" onclick="signup()">
+                    Sign Up
+                </button>
+                <button class="bottone" id="signin" onclick="signin()">
+                    Sign In
+                </button>
+                <button class="bottone" id="signout" onclick="signout()">
+                    Sign Out
+                </button>
+            </div>
+        </main>
 
-        button {
-            margin-top: 12px;
-            padding: 12px;
-            font-size: 18px;
-            cursor: pointer;
-        }
-    </style>
-</head>
+        <footer class="footer">
+            <div class="footer-upper">
+                <div class="copyright">
+                    <a href="index.html">
+                        <img
+                            src="images/logo_background.svg"
+                            alt="Studiomatic logo"
+                            id="logo-footer"
+                        />
+                    </a>
+                    <p>
+                        <i class="fa-regular fa-copyright"></i>
+                        2025 Studiomatic
+                    </p>
+                </div>
 
-<body>
+                <div class="term">
+                    <a href="/regole-utilizzo.html">Regole di Utilizzo</a>
+                    <a href="/informativa-privacy.html">Informativa Privacy</a>
+                </div>
+            </div>
 
-    <div id="status">checking backend ⏳</div>
+            <div class="links-container">
+                <nav class="footer-navigation">
+                    <ul>
+                        <li>
+                            <a href="contatti.html">
+                                <i class="fa-solid fa-phone"></i>
+                                <span>Contatti</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="chi_siamo.html">
+                                <i class="fa-solid fa-people-group"></i>
+                                <span>Chi siamo</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="supportaci.html">
+                                <i class="fa-solid fa-heart"></i>
+                                <span>Supportaci</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="domande_frequenti.html">
+                                <i class="fa-solid fa-circle-question"></i>
+                                <span>Domande frequenti</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
 
-    <h2>Login</h2>
-    <input type="email" id="email" placeholder="email">
-    <input type="password" id="password" placeholder="password">
-    <input type="invite" id="invite" placeholder="invite (signup only)">
-    <button id="signup" onclick="signup()">Sign Up</button>
-    <button id="signin" onclick="signin()">Sign In</button>
-    <button id="signout" onclick="signout()">Sign Out</button>
-    <button id="cookiesignin" onclick="cookiesignin()">Test Cookie Sign In</button>
+                <div class="footer-contacts">
+                    <ul>
+                        <li>
+                            <a href="mailto:studiomatic.macchinzetti@gmail.com">
+                                <i class="fa-solid fa-envelope"></i>
+                                <span>Email</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a
+                                href="https://www.imanzetti.edu.it/"
+                                target="_blank"
+                                rel="noopener"
+                            >
+                                <i class="fa-solid fa-school"></i>
+                                <span>ISITP Manzetti</span>
+                            </a>
+                            <p><span>Classe 5A IT</span></p>
+                            <p><span>A.S. 2025/2026</span></p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
 
-    <script src="js/main.js"></script>
-    <script src="js/login.js"></script>
-    <script>updateAuthUI()</script>
-</body>
+            <div class="footer-bottom">
+                <div class="footer-social">
+                    <a
+                        class="social-instagram"
+                        href="https://www.instagram.com/x"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        <i class="fa-brands fa-instagram"></i>
+                    </a>
 
+                    <a
+                        class="social-tiktok"
+                        href="https://www.tiktok.com/@x"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        <i class="fa-brands fa-tiktok"></i>
+                    </a>
+                </div>
+            </div>
+        </footer>
+
+        <script src="js/main.js"></script>
+        <script src="js/login.js"></script>
+        <script>
+            updateAuthUI();
+        </script>
+    </body>
 </html>

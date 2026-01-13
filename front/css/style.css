@@ -33,6 +33,18 @@ div {
    3. HOME PAGE CONTENT
    ============================== */
 
+#email,
+#password,
+#invite {
+    background-color: var(--color-white);
+    border-radius: 14px;
+    padding: 12px 22px;
+    margin: 10px;
+    font-size: 16px;
+    border: 2px solid var(--color-white);
+    box-shadow: 0 6px 12px rgba(1, 27, 47, 0.25);
+}
+
 .bottone {
     background: var(--color-light-blue);
     color: var(--color-white);
