@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Account</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 480px;
+            margin: 120px auto;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 12px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="status">checking backend ⏳</div>
+    <script src="js/main.js"></script>
+    <script src="js/account.js"></script>
+    <script>redirLoggedOut()</script>
+
+    <h2 id="welc">Account</h2>
+    <input type="email" id="email" placeholder="email">
+    <button onclick="updateEmail()">Update Email</button>
+
+    <hr>
+
+    <input type="password" id="password" placeholder="password">
+    <input type="password" id="confirmpassword" placeholder="password (again)">
+    <button onclick="updatePassword()">Update Password</button>
+
+    <script>welc()</script>
+</body>
+
+</html>

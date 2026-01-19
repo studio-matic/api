@@ -66,7 +66,8 @@ async fn main() {
         .route("/users/auth/signin", routing::post(users::auth::signin))
         .route("/users/auth/signout", routing::delete(users::auth::signout))
         .route("/users/auth/validate", routing::get(users::auth::validate))
-        .route("/users/me", routing::get(users::me::me))
+        .route("/users/me", routing::get(users::me::get::me))
+        .route("/users/me", routing::patch(users::me::patch::me))
         .route("/donations", routing::get(donations::get::donations))
         .route("/donations/{id}", routing::get(donations::get::donation))
         .route("/donations", routing::post(donations::post::donation))
@@ -104,6 +105,7 @@ async fn main() {
                     Method::POST,
                     Method::PUT,
                     Method::DELETE,
+                    Method::PATCH,
                 ])
                 .allow_headers([
                     header::CONTENT_TYPE,

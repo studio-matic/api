@@ -1,4 +1,5 @@
 use crate::ErrorResponse;
+use argon2::password_hash;
 use axum::{
     Json,
     http::StatusCode,
@@ -28,6 +29,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 pub enum Error {
     #[error("Account not found")]
     NotFound,
+    #[error("Could not hash password")]
+    PasswordHash(#[from] password_hash::Error),
     #[error("Could not query database")]
     Database(#[from] sqlx::Error),
 }
@@ -36,6 +39,7 @@ impl IntoResponse for Error {
     fn into_response(self) -> response::Response {
         let status = match self {
             Self::NotFound => StatusCode::NOT_FOUND,
+            Self::PasswordHash(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Self::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
