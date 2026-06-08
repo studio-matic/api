@@ -31,7 +31,6 @@ pub struct Request {
     responses(
         (
             status = StatusCode::OK,
-            body = Response
         ),
         (
             status = StatusCode::UNAUTHORIZED,
